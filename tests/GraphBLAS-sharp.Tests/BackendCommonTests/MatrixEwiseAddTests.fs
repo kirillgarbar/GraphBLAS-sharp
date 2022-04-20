@@ -111,7 +111,7 @@ let testFixtures case =
       let getCorrectnessTestName datatype =
           sprintf "Correctness on %s, %A, %A" datatype case (System.Random().Next())
 
-      let boolSum = <@
+      let boolSum1 = <@
           fun (x: bool option) (y: bool option) ->
             let mutable res = false
             match x, y with
@@ -121,48 +121,24 @@ let testFixtures case =
             | None, None -> ()
             if res = false then None else (Some res)
       @>
-//      let intSum x y = <@
-//          fun (x: int option) (y: int option) ->
-//            match x with _ -> Some true
-//          @>
+
+      let boolSum2 = <@
+          fun (x: bool option) (y: bool option) ->
+            match x, y with
+            | Some f, Some s -> Some (f || s)
+            | Some f, None -> Some f
+            | None, Some s -> Some s
+            | None, None -> None
+      @>
 
       let boolAdd =
-          Matrix.eWiseAdd case.ClContext boolSum wgSize
+          Matrix.eWiseAdd case.ClContext boolSum1 wgSize
 
       let boolToCOO = Matrix.toCOO case.ClContext wgSize
 
       case
       |> correctnessGenericTest false (||) boolAdd boolToCOO (=)
       |> testPropertyWithConfig config (getCorrectnessTestName "bool")
-
-//      let intAdd =
-//          Matrix.eWiseAdd case.ClContext intSum wgSize
-//
-//      let intToCOO = Matrix.toCOO case.ClContext wgSize
-//
-//      case
-//      |> correctnessGenericTest 0 (+) intAdd intToCOO (=)
-//      |> testPropertyWithConfig config (getCorrectnessTestName "int")
-
-//      let floatSum = sum (+)
-//      let floatAdd =
-//          Matrix.eWiseAdd case.ClContext <@ (+) @> wgSize
-//
-//      let floatToCOO = Matrix.toCOO case.ClContext wgSize
-//
-//      case
-//      |> correctnessGenericTest 0.0 (+) floatAdd floatToCOO (fun x y -> abs (x - y) < Accuracy.medium.absolute)
-//      |> testPropertyWithConfig config (getCorrectnessTestName "float")
-
-//      let byteSum = sum (+)
-//      let byteAdd =
-//          Matrix.eWiseAdd case.ClContext <@ byteSum @> wgSize
-//
-//      let byteToCOO = Matrix.toCOO case.ClContext wgSize
-//
-//      case
-//      |> correctnessGenericTest 0uy (+) byteAdd byteToCOO (=)
-//      |> testPropertyWithConfig config (getCorrectnessTestName "byte")
       ]
 
 let tests =
