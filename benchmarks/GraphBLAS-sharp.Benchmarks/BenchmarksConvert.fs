@@ -67,7 +67,7 @@ type TestBenchmarks<'matrixResT, 'matrixInT, 'elem when 'matrixResT :> Backend.I
     member this.WorkGroupSize = snd this.OclContextInfo
 
     member this.Processor =
-        let p = this.OclContext.Provider.CommandQueue
+        let p = this.OclContext.CommandQueue
         p.Error.Add(fun e -> failwithf "%A" e)
         p
 
