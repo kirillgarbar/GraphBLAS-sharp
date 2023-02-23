@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1677190893428,
+  "lastUpdate": 1677190936481,
   "repoUrl": "https://github.com/kirillgarbar/GraphBLAS-sharp",
   "entries": {
     "BFS": [
@@ -228,6 +228,34 @@ window.BENCHMARK_DATA = {
             "value": 68125533.3,
             "unit": "ns",
             "range": "± 8177172.303367492"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@users.noreply.github.com",
+            "name": "github-action-benchmark"
+          },
+          "committer": {
+            "email": "github@users.noreply.github.com",
+            "name": "github-action-benchmark"
+          },
+          "distinct": true,
+          "id": "fc335d9b8255ec87cd516dfb37bf5c97c5419419",
+          "message": "add BFS (benchmarkdotnet) benchmark result for 8a3f6d3bcc7b0d50be54f1b7289d39cc76f952f2",
+          "timestamp": "2023-02-24T01:21:33+03:00",
+          "tree_id": "de62864d9722d338185eea44959037ca796020a9",
+          "url": "https://github.com/kirillgarbar/GraphBLAS-sharp/commit/fc335d9b8255ec87cd516dfb37bf5c97c5419419"
+        },
+        "date": 1677190936466,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "wing.mtx",
+            "value": 79930932.6,
+            "unit": "ns",
+            "range": "± 7540010.9852901725"
           }
         ]
       }
