@@ -37,3 +37,4 @@ jobs:
           auto-push: true
           gh-pages-branch: pages-test
           benchmark-data-dir-path: docs/benchmarks
+          skip-fetch-gh-page: true
