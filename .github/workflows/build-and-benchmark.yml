@@ -19,6 +19,9 @@ jobs:
       - name: OpenCL Info
         run: clinfo
         
+      - name: Echo
+        run: echo ${{ github.actor }}
+        
       - name: Build GraphBLAS-sharp
         run: dotnet build -c Release
 
