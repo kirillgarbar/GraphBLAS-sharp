@@ -3,7 +3,8 @@ name: Benchmark GraphBLAS-sharp
 on:
   push:
     paths-ignore:
-      - 'docs/**'
+      - 'docs/benchmarks/**'
+  workflow_dispatch:
 
 permissions:
   contents: write
