@@ -10,6 +10,10 @@ permissions:
   contents: write
   deployments: write
 
+variables:
+  - name: current_branch
+    value: ${GITHUB_REF##*/}
+
 jobs:
   build-and-bench-self-hosted:
     runs-on: self-hosted
@@ -31,10 +35,6 @@ jobs:
 
       - name: Benchmark
         run: python3 benchmarks/GraphBLAS-sharp.Benchmarks/Scripts/Benchmark.py
-
-      variables:
-        - name: current_branch
-          value: ${GITHUB_REF##*/}
           
       - name: Charts
         uses: rhysd/github-action-benchmark@v1
