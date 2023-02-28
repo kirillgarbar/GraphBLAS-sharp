@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1677594627904,
+  "lastUpdate": 1677594809475,
   "repoUrl": "https://github.com/kirillgarbar/GraphBLAS-sharp",
   "entries": {
     "BFS": [
@@ -374,6 +374,36 @@ window.BENCHMARK_DATA = {
             "value": 82426107.5,
             "unit": "ns",
             "range": "± 4914326.767664298"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "st087492@student.spbu.ru",
+            "name": "kirillgarbar",
+            "username": "kirillgarbar"
+          },
+          "committer": {
+            "email": "st087492@student.spbu.ru",
+            "name": "kirillgarbar",
+            "username": "kirillgarbar"
+          },
+          "distinct": true,
+          "id": "5e1813d9fe58f17ef4887e8f231481369c0fb06b",
+          "message": "Merge remote-tracking branch 'origin/pages-test' into bfs",
+          "timestamp": "2023-02-28T17:32:43+03:00",
+          "tree_id": "66122575eee231543aec0b041ba8c17629ff3c20",
+          "url": "https://github.com/kirillgarbar/GraphBLAS-sharp/commit/5e1813d9fe58f17ef4887e8f231481369c0fb06b"
+        },
+        "date": 1677594809462,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "wing.mtx",
+            "value": 73988443.3,
+            "unit": "ns",
+            "range": "± 4353055.647923985"
           }
         ]
       }
