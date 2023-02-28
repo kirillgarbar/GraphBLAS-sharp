@@ -25,7 +25,7 @@ jobs:
         run: clinfo
         
       - name: Echo
-        run: echo $(GITHUB_REF##*/)
+        run: echo ${{ github.ref }}
 
       - name: Build GraphBLAS-sharp
         run: dotnet build -c Release
