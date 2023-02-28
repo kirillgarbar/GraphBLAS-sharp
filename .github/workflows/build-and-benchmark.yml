@@ -43,6 +43,6 @@ jobs:
           github-token: ${{ secrets._GITHUB_TOKEN }}
           # Push and deploy GitHub pages branch automatically
           auto-push: true
-          gh-pages-branch: ${{ github.ref }}
+          gh-pages-branch: ${{ github.ref##*/ }}
           benchmark-data-dir-path: docs/benchmarks
           skip-fetch-gh-pages: true
