@@ -14,11 +14,6 @@ permissions:
 jobs:
   build-and-bench-self-hosted:
     runs-on: self-hosted
-
-    parameters:
-      - name: current_branch
-        value: ${GITHUB_REF##*/}
-
     steps:
 
       - name: Check out repository code
@@ -48,6 +43,6 @@ jobs:
           github-token: ${{ secrets._GITHUB_TOKEN }}
           # Push and deploy GitHub pages branch automatically
           auto-push: true
-          gh-pages-branch: $(current_branch)
+          gh-pages-branch: $(GITHUB_REF##*/)
           benchmark-data-dir-path: docs/benchmarks
           skip-fetch-gh-pages: true
