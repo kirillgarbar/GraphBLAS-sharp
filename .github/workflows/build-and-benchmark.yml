@@ -25,7 +25,7 @@ jobs:
         run: clinfo
         
       - name: Echo
-        run: echo $(current_branch)
+        run: echo $(GITHUB_REF##*/)
 
       - name: Build GraphBLAS-sharp
         run: dotnet build -c Release
@@ -43,6 +43,6 @@ jobs:
           github-token: ${{ secrets._GITHUB_TOKEN }}
           # Push and deploy GitHub pages branch automatically
           auto-push: true
-          gh-pages-branch: $(GITHUB_REF##*/)
+          gh-pages-branch: ${GITHUB_REF##*/}
           benchmark-data-dir-path: docs/benchmarks
           skip-fetch-gh-pages: true
