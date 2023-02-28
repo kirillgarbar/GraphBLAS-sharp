@@ -1,5 +1,9 @@
 name: Benchmark GraphBLAS-sharp
 
+parameters:
+  - name: current_branch
+    value: ${GITHUB_REF##*/}
+
 on:
   push:
     paths-ignore:
@@ -10,9 +14,6 @@ permissions:
   contents: write
   deployments: write
 
-variables:
-  - name: current_branch
-    value: ${GITHUB_REF##*/}
 
 jobs:
   build-and-bench-self-hosted:
