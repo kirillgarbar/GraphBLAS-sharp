@@ -1,6 +1,10 @@
 name: Benchmark GraphBLAS-sharp
 
-on: [push, workflow_dispatch, pull_request]
+on:
+  push:
+  workflow_dispatch:
+    paths-ignore:
+      - 'docs/**'
 
 permissions:
   contents: write
