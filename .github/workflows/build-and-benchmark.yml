@@ -34,11 +34,11 @@ jobs:
         run: python3 benchmarks/GraphBLAS-sharp.Benchmarks/Scripts/Benchmark.py
           
       - name: Charts
+        env:
+            BRANCH: ${GITHUB_REF##*/}
         uses: rhysd/github-action-benchmark@v1
         with:
           name: BFS
-          env:
-            BRANCH: ${GITHUB_REF##*/}
           tool: 'benchmarkdotnet'
           output-file-path: BenchmarkDotNet.Artifacts/results/GraphBLAS.FSharp.Benchmarks.BFSBenchmarksWithoutDataTransfer-report-brief.json
           # Access token to deploy GitHub Pages branch
