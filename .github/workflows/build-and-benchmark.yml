@@ -12,13 +12,14 @@ permissions:
 
 
 jobs:
-  build-and-bench-self-hosted:
-    runs-on: self-hosted
 
-    variables:
+  variables:
     - name: one
       value: initialValue
       
+  build-and-bench-self-hosted:
+    runs-on: self-hosted
+
     steps:
 
       - name: Check out repository code
