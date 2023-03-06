@@ -10,13 +10,11 @@ permissions:
   contents: write
   deployments: write
 
+variables:
+  global_variable: value
 
 jobs:
 
-  variables:
-    - name: one
-      value: initialValue
-      
   build-and-bench-self-hosted:
     runs-on: self-hosted
 
