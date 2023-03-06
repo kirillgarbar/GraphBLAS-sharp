@@ -10,14 +10,10 @@ permissions:
   contents: write
   deployments: write
 
-variables:
-  global_variable: value
 
 jobs:
-
   build-and-bench-self-hosted:
     runs-on: self-hosted
-
     steps:
 
       - name: Check out repository code
@@ -41,12 +37,14 @@ jobs:
         uses: rhysd/github-action-benchmark@v1
         with:
           name: BFS
+          env:
+            BRANCH: ${GITHUB_REF##*/}
           tool: 'benchmarkdotnet'
           output-file-path: BenchmarkDotNet.Artifacts/results/GraphBLAS.FSharp.Benchmarks.BFSBenchmarksWithoutDataTransfer-report-brief.json
           # Access token to deploy GitHub Pages branch
           github-token: ${{ secrets._GITHUB_TOKEN }}
           # Push and deploy GitHub pages branch automatically
           auto-push: true
-          gh-pages-branch: ${GITHUB_REF##*/}
+          gh-pages-branch: ${BRANCH}
           benchmark-data-dir-path: docs/benchmarks
           skip-fetch-gh-pages: true
