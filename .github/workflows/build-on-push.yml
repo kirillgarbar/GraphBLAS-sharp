@@ -1,10 +1,10 @@
 name: FAKE Build on Push
 
-on:
-  push:
-    paths-ignore:
-      - 'docs/benchmarks/**'
-  workflow_dispatch:
+#on:
+#  push:
+#    paths-ignore:
+#      - 'docs/benchmarks/**'
+#  workflow_dispatch:
 
 jobs:
   win-build:
