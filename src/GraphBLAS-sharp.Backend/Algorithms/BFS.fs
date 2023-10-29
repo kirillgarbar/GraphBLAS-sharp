@@ -10,6 +10,71 @@ open GraphBLAS.FSharp.Objects.ClContextExtensions
 open GraphBLAS.FSharp.Objects.ClCellExtensions
 
 module internal BFS =
+    let singleSourceSPLA
+        (add: Expr<int option -> int option -> int option>)
+        (mul: Expr<'a option -> int option -> int option>)
+        (clContext: ClContext)
+        workGroupSize
+        =
+
+        let spMVInPlace =
+            Operations.SpMVSPLATo add mul clContext workGroupSize
+
+        let zeroCreate =
+            Vector.zeroCreate clContext workGroupSize
+
+        let ofList = Vector.ofList clContext workGroupSize
+
+        let maskComplementedInPlace =
+            Vector.map2InPlace Mask.complementedOp clContext workGroupSize
+
+        let fillSubVectorTo =
+            Vector.assignByMaskInPlace Mask.assign clContext workGroupSize
+
+        let containsNonZero =
+            Vector.exists Predicates.isSome clContext workGroupSize
+
+        fun (queue: MailboxProcessor<Msg>) (matrix: ClMatrix<'a>) (source: int) ->
+            let vertexCount = matrix.RowCount
+
+            let levels =
+                zeroCreate queue DeviceOnly vertexCount Dense
+
+            let mutable front =
+                ofList queue HostInterop Dense vertexCount [ source, 1 ]
+
+            let mutable next =
+                zeroCreate queue DeviceOnly vertexCount Dense
+
+            let mutable level = 0
+            let mutable stop = false
+
+            while not stop do
+                level <- level + 1
+
+                //Assigning new level values
+                fillSubVectorTo queue levels front level
+
+                //Getting new frontier
+                spMVInPlace queue matrix front next
+
+                maskComplementedInPlace queue next levels
+
+                //Checking if front is empty
+                stop <-
+                    not
+                    <| (containsNonZero queue next).ToHostAndFree queue
+
+                let temp = front
+                front <- next
+                next <- temp
+
+
+            front.Dispose queue
+            next.Dispose queue
+
+            levels
+
     let singleSource
         (add: Expr<int option -> int option -> int option>)
         (mul: Expr<'a option -> int option -> int option>)

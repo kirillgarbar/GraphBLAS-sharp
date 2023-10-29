@@ -7,6 +7,115 @@ open GraphBLAS.FSharp.Objects
 open GraphBLAS.FSharp.Objects.ClContextExtensions
 
 module internal SpMV =
+    let runSPLATo
+        (add: Expr<'c option -> 'c option -> 'c option>)
+        (mul: Expr<'a option -> 'b option -> 'c option>)
+        (clContext: ClContext)
+        workGroupSize
+        =
+
+        let spmv =
+            <@ fun (ndRange: Range2D)
+                (numberOfRows: int)
+                (numberOfGroups: int)
+                (matrixPtr: ClArray<int>)
+                (matrixColumns: ClArray<int>)
+                (matrixValues: ClArray<'a>)
+                (vectorValues: ClArray<'b option>)
+                (resultValues: ClArray<'c option>) ->
+
+                let gid = ndRange.GlobalID0 // id of row
+                let lid = ndRange.LocalID1  // id inside row
+                let localSize = workGroupSize
+                let globalStride = numberOfGroups
+
+                let segmentSum = localArray<'c option> workGroupSize
+
+                let mutable row = gid
+
+                //Reduce one row on each iteration
+                while row < numberOfRows do
+                    if lid = 0 then resultValues.[row] <- None
+
+                    let workStart = matrixPtr.[row]
+                    let workEnd = matrixPtr.[row + 1]
+
+                    let mutable sum: 'c option = None
+
+                    let mutable i = workStart + lid
+
+                    //Each thread reduces 1 / workGroupSize values to the local array
+                    while i < workEnd do
+                        let columnIndex = matrixColumns.[i]
+                        let mulRes = (%mul) (Some matrixValues.[i]) vectorValues.[columnIndex] // Brahma exception
+
+                        let res = (%add) sum mulRes
+                        sum <- res
+                        i <- i + localSize
+
+                    segmentSum.[lid] <- sum
+
+                    barrierLocal ()
+
+                    let mutable blockSize = workGroupSize
+
+                    //Reduce local array
+                    while blockSize >= 2 do
+                        let halfBlockSize = blockSize / 2
+                        if lid < halfBlockSize then
+                            let res = (%add) segmentSum.[lid] segmentSum.[lid + halfBlockSize]
+                            segmentSum.[lid] <- res
+                        blockSize <- halfBlockSize
+
+                    if lid = 0 then
+                        resultValues.[row] <- segmentSum.[0]
+
+                    row <- row + globalStride
+                    @>
+
+        let spmv = clContext.Compile spmv
+
+        fun (queue: MailboxProcessor<_>) (matrix: ClMatrix.CSR<'a>) (vector: ClArray<'b option>) (result: ClArray<'c option>) ->
+
+            let nGroups = min matrix.RowCount 512
+
+            let ndRange = Range2D (nGroups, workGroupSize, 1, workGroupSize)
+
+            let kernel = spmv.GetKernel()
+
+            queue.Post(
+                Msg.MsgSetArguments
+                    (fun () ->
+                        kernel.KernelFunc
+                            ndRange
+                            matrix.RowCount
+                            nGroups
+                            matrix.RowPointers
+                            matrix.Columns
+                            matrix.Values
+                            vector
+                            result)
+            )
+
+            queue.Post(Msg.CreateRunMsg<_, _>(kernel))
+
+    let runSPLA
+        (add: Expr<'c option -> 'c option -> 'c option>)
+        (mul: Expr<'a option -> 'b option -> 'c option>)
+        (clContext: ClContext)
+        workGroupSize
+        =
+        let runTo = runSPLATo add mul clContext workGroupSize
+
+        fun (queue: MailboxProcessor<_>) allocationMode (matrix: ClMatrix.CSR<'a>) (vector: ClArray<'b option>) ->
+
+            let result =
+                clContext.CreateClArrayWithSpecificAllocationMode<'c option>(allocationMode, matrix.RowCount)
+
+            runTo queue matrix vector result
+
+            result
+
     let runTo
         (add: Expr<'c option -> 'c option -> 'c option>)
         (mul: Expr<'a option -> 'b option -> 'c option>)
