@@ -241,6 +241,36 @@ module Operations =
             | ClMatrix.CSR m, ClVector.Dense v, ClVector.Dense r -> runTo queue m v r
             | _ -> failwith "Not implemented yet"
 
+    let SpMVSimpleTo
+        (add: Expr<'c option -> 'c option -> 'c option>)
+        (mul: Expr<'a option -> 'b option -> 'c option>)
+        (clContext: ClContext)
+        workGroupSize
+        =
+
+        let runTo =
+            Backend.Operations.SpMV.runSimpleTo add mul clContext workGroupSize
+
+        fun (queue: MailboxProcessor<_>) (matrix: ClMatrix<'a>) (vector: ClVector<'b>) (result: ClVector<'c>) ->
+            match matrix, vector, result with
+            | ClMatrix.CSR m, ClVector.Dense v, ClVector.Dense r -> runTo queue m v r
+            | _ -> failwith "Not implemented yet"
+
+    let SpMVSimple
+        (add: Expr<'c option -> 'c option -> 'c option>)
+        (mul: Expr<'a option -> 'b option -> 'c option>)
+        (clContext: ClContext)
+        workGroupSize
+        =
+
+        let run =
+            Backend.Operations.SpMV.runSimple add mul clContext workGroupSize
+
+        fun (queue: MailboxProcessor<_>) allocationFlag (matrix: ClMatrix<'a>) (vector: ClVector<'b>) ->
+            match matrix, vector with
+            | ClMatrix.CSR m, ClVector.Dense v -> run queue allocationFlag m v |> ClVector.Dense
+            | _ -> failwith "Not implemented yet"
+
     /// <summary>
     /// CSR Matrix - dense vector multiplication.
     /// </summary>

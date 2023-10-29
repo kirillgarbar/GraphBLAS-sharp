@@ -10,6 +10,8 @@ module Algorithms =
 
         let singleSourceSPLA = BFS.singleSourceSPLA
 
+        let singleSourceSimple = BFS.singleSourceSimple
+
         let singleSourceSparse = BFS.singleSourceSparse
 
         let singleSourcePushPull = BFS.singleSourcePushPull

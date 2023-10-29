@@ -48,7 +48,6 @@ module internal SpMV =
                     while i < workEnd do
                         let columnIndex = matrixColumns.[i]
                         let mulRes = (%mul) (Some matrixValues.[i]) vectorValues.[columnIndex] // Brahma exception
-
                         let res = (%add) sum mulRes
                         sum <- res
                         i <- i + localSize
@@ -106,6 +105,78 @@ module internal SpMV =
         workGroupSize
         =
         let runTo = runSPLATo add mul clContext workGroupSize
+
+        fun (queue: MailboxProcessor<_>) allocationMode (matrix: ClMatrix.CSR<'a>) (vector: ClArray<'b option>) ->
+
+            let result =
+                clContext.CreateClArrayWithSpecificAllocationMode<'c option>(allocationMode, matrix.RowCount)
+
+            runTo queue matrix vector result
+
+            result
+
+    let runSimpleTo
+        (add: Expr<'c option -> 'c option -> 'c option>)
+        (mul: Expr<'a option -> 'b option -> 'c option>)
+        (clContext: ClContext)
+        workGroupSize
+        =
+
+        let spmv =
+            <@ fun (ndRange: Range1D)
+                (numberOfRows: int)
+                (matrixPtr: ClArray<int>)
+                (matrixColumns: ClArray<int>)
+                (matrixValues: ClArray<'a>)
+                (vectorValues: ClArray<'b option>)
+                (resultValues: ClArray<'c option>) ->
+
+                let gid = ndRange.GlobalID0 // id of row
+
+                if gid < numberOfRows then
+                    let rowStart = matrixPtr.[gid]
+                    let rowEnd = matrixPtr.[gid + 1]
+
+                    let mutable sum: 'c option = None
+
+                    for i in rowStart .. rowEnd - 1 do
+                        let columnIndex = matrixColumns.[i]
+                        let mulRes = (%mul) (Some matrixValues.[i]) vectorValues.[columnIndex] // Brahma exception
+                        let res = (%add) sum mulRes
+                        sum <- res
+
+                    resultValues.[gid] <- sum @>
+
+        let spmv = clContext.Compile spmv
+
+        fun (queue: MailboxProcessor<_>) (matrix: ClMatrix.CSR<'a>) (vector: ClArray<'b option>) (result: ClArray<'c option>) ->
+
+            let ndRange = Range1D.CreateValid(matrix.RowCount, workGroupSize)
+
+            let kernel = spmv.GetKernel()
+
+            queue.Post(
+                Msg.MsgSetArguments
+                    (fun () ->
+                        kernel.KernelFunc
+                            ndRange
+                            matrix.RowCount
+                            matrix.RowPointers
+                            matrix.Columns
+                            matrix.Values
+                            vector
+                            result)
+            )
+
+            queue.Post(Msg.CreateRunMsg<_, _>(kernel))
+
+    let runSimple
+        (add: Expr<'c option -> 'c option -> 'c option>)
+        (mul: Expr<'a option -> 'b option -> 'c option>)
+        (clContext: ClContext)
+        workGroupSize
+        =
+        let runTo = runSimpleTo add mul clContext workGroupSize
 
         fun (queue: MailboxProcessor<_>) allocationMode (matrix: ClMatrix.CSR<'a>) (vector: ClArray<'b option>) ->
 
