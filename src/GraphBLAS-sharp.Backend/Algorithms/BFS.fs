@@ -135,7 +135,7 @@ module internal BFS =
             Operations.SpMVInPlace add mul clContext workGroupSize
 
         let spMSpV =
-            Operations.SpMSpV add mul clContext workGroupSize
+            Operations.SpMSpVSimple add mul clContext workGroupSize
 
         let zeroCreate =
             Vector.zeroCreate clContext workGroupSize
@@ -190,28 +190,21 @@ module internal BFS =
                 match frontier with
                 | ClVector.Sparse _ ->
                     //Getting new frontier
-                    match spMSpV queue matrix frontier with
+                    match spMSpV queue matrix frontier levels with
                     | None ->
                         frontier.Dispose queue
                         stop <- true
-                    | Some newFrontier ->
+                    | Some newMaskedFrontier ->
                         frontier.Dispose queue
-                        //Filtering visited vertices
-                        match maskComplemented queue DeviceOnly newFrontier levels with
-                        | None ->
-                            stop <- true
-                            newFrontier.Dispose queue
-                        | Some newMaskedFrontier ->
-                            newFrontier.Dispose queue
 
-                            //Push/pull
-                            let NNZ = getNNZ queue newMaskedFrontier
+                        //Push/pull
+                        let NNZ = getNNZ queue newMaskedFrontier
 
-                            if (push NNZ newMaskedFrontier.Size) then
-                                frontier <- newMaskedFrontier
-                            else
-                                frontier <- toDense queue DeviceOnly newMaskedFrontier
-                                newMaskedFrontier.Dispose queue
+                        if (push NNZ newMaskedFrontier.Size) then
+                            frontier <- newMaskedFrontier
+                        else
+                            frontier <- toDense queue DeviceOnly newMaskedFrontier
+                            newMaskedFrontier.Dispose queue
                 | ClVector.Dense oldFrontier ->
                     //Getting new frontier
                     spMVInPlace queue matrix frontier frontier

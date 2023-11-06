@@ -266,6 +266,199 @@ module SpMSpV =
             |> Option.bind id
 
 
+    let private count (clContext: ClContext) workGroupSize =
+
+        let count =
+            <@ fun (ndRange: Range1D)
+                vectorLength
+                (vectorIndices: ClArray<int>)
+                (vectorValues: ClArray<'b>)
+                (vectorMask: ClArray<'d option>)
+                (matrixRowPointers: ClArray<int>)
+                (matrixColumns: ClArray<int>)
+                (result: ClCell<int>) ->
+                let i = ndRange.GlobalID0
+
+                if i < vectorLength then
+                    let vectorIndex = vectorIndices.[i]
+                    let vectorValue = vectorValues.[i]
+
+                    let rowStart = matrixRowPointers.[vectorIndex]
+                    let rowEnd = matrixRowPointers.[vectorIndex + 1]
+
+                    let mutable count = 0
+
+                    for i in rowStart .. rowEnd - 1 do
+                        match vectorMask.[matrixColumns.[i]] with
+                        | None -> count <- count + 1
+                        | Some _ -> ()
+
+                    atomic (+) result.Value count |> ignore @>
+
+        let count = clContext.Compile count
+
+        fun (queue: MailboxProcessor<_>) (matrix: ClMatrix.CSR<'a>) (vector: ClVector.Sparse<'b>) (vectorMask: ClArray<'d option>) ->
+
+            let length = vector.NNZ
+
+            let result =
+                clContext.CreateClCell(0)
+
+            let ndRange =
+                Range1D.CreateValid(length, workGroupSize)
+
+            let count = count.GetKernel()
+
+            queue.Post(
+                Msg.MsgSetArguments
+                    (fun () ->
+                        count.KernelFunc
+                            ndRange
+                            length
+                            vector.Indices
+                            vector.Values
+                            vectorMask
+                            matrix.RowPointers
+                            matrix.Columns
+                            result)
+            )
+
+            queue.Post(Msg.CreateRunMsg<_, _>(count))
+
+            result.ToHostAndFree queue
+
+    let private multiplyValues (clContext: ClContext) (mul: Expr<'a option -> 'b option -> 'c option>) workGroupSize =
+
+        let multiply =
+            <@ fun (ndRange: Range1D)
+                resultLength
+                (vectorIndices: ClArray<int>)
+                (vectorValues: ClArray<'b>)
+                (vectorMask: ClArray<'d option>)
+                (matrixRowPointers: ClArray<int>)
+                (matrixColumns: ClArray<int>)
+                (matrixValues: ClArray<'a>)
+                (resultOffset: ClCell<int>)
+                (resultIndices: ClArray<int>)
+                (resultValues: ClArray<'c option>) ->
+                let i = ndRange.GlobalID0
+
+                if i < resultLength then
+                    let vectorIndex = vectorIndices.[i]
+                    let vectorValue = vectorValues.[i]
+
+                    let rowStart = matrixRowPointers.[vectorIndex]
+                    let rowEnd = matrixRowPointers.[vectorIndex + 1]
+
+                    let mutable count = 0
+
+                    for i in rowStart .. rowEnd - 1 do
+                        match vectorMask.[matrixColumns.[i]] with
+                        | None -> count <- count + 1
+                        | Some _ -> ()
+
+                    let mutable offset = atomic (+) resultOffset.Value count
+
+                    for i in rowStart .. rowEnd - 1 do
+                        let columnIndex = matrixColumns.[i]
+
+                        match vectorMask.[columnIndex] with
+                        | None ->
+                            resultIndices.[offset] <- columnIndex
+                            resultValues.[offset] <- (%mul) (Some matrixValues.[i]) (Some vectorValue)
+                            offset <- offset + 1
+                        | Some _ -> () @>
+
+        let kernel = clContext.Compile multiply
+
+        fun (queue: MailboxProcessor<_>) (matrix: ClMatrix.CSR<'a>) (vector: ClVector.Sparse<'b>) (vectorMask: ClArray<'d option>) (resultSize: int) ->
+
+            let multipliedIndices = clContext.CreateClArrayWithSpecificAllocationMode<int>(DeviceOnly, resultSize)
+            let multipliedValues = clContext.CreateClArrayWithSpecificAllocationMode<'c option>(DeviceOnly, resultSize)
+            let offset = clContext.CreateClCell 0
+
+            let ndRange =
+                Range1D.CreateValid(resultSize, workGroupSize)
+
+            let kernel = kernel.GetKernel()
+
+            queue.Post(
+                Msg.MsgSetArguments
+                    (fun () ->
+                        kernel.KernelFunc
+                            ndRange
+                            vector.NNZ
+                            vector.Indices
+                            vector.Values
+                            vectorMask
+                            matrix.RowPointers
+                            matrix.Columns
+                            matrix.Values
+                            offset
+                            multipliedIndices
+                            multipliedValues)
+            )
+
+            queue.Post(Msg.CreateRunMsg<_, _>(kernel))
+
+            offset.Free queue
+
+            multipliedIndices, multipliedValues
+
+    let runSimple
+        (add: Expr<'c option -> 'c option -> 'c option>)
+        (mul: Expr<'a option -> 'b option -> 'c option>)
+        (clContext: ClContext)
+        workGroupSize
+        =
+
+        let count = count clContext workGroupSize
+
+        let multiplyValues = multiplyValues clContext mul workGroupSize
+
+        let sort = Sort.Radix.runByKeysStandard clContext workGroupSize
+
+        let segReduce =
+            Reduce.ByKey.Option.segmentSequential add clContext workGroupSize
+
+        fun (queue: MailboxProcessor<_>) (matrix: ClMatrix.CSR<'a>) (vector: ClVector.Sparse<'b>) (mask: ClArray<'d option>) ->
+
+            match count queue matrix vector mask with
+            | 0 -> None
+            | resultSize ->
+                let multipliedIndices, multipliedValues = multiplyValues queue matrix vector mask resultSize
+
+                // queue.PostAndReply(Msg.MsgNotifyMe)
+                // printfn "mr %A" (matrix.RowPointers.ToHost queue)
+                // printfn "mc %A" (matrix.Columns.ToHost queue)
+                // printfn "mv %A" (matrix.Values.ToHost queue)
+                //
+                // printfn "vi %A" (vector.Indices.ToHost queue)
+                // printfn "vv %A" (vector.Values.ToHost queue)
+                //
+                // printfn "mi %A" (multipliedIndices.ToHost queue)
+                // printfn "mv %A" (multipliedValues.ToHost queue)
+
+                let sortedIndices, sortedValues = sort queue DeviceOnly multipliedIndices multipliedValues
+
+                multipliedIndices.Free queue
+                multipliedValues.Free queue
+
+                let result =
+                    segReduce queue DeviceOnly sortedIndices sortedValues
+                    |> Option.map
+                        (fun (reducedValues, reducedKeys) ->
+                            { Context = clContext
+                              Indices = reducedKeys
+                              Values = reducedValues
+                              Size = matrix.ColumnCount })
+
+                sortedIndices.Free queue
+                sortedValues.Free queue
+
+                result
+
+
     let runBoolStandard
         (add: Expr<'c option -> 'c option -> 'c option>)
         (mul: Expr<'a option -> 'b option -> 'c option>)

@@ -276,6 +276,28 @@ module Operations =
     /// <param name="mul">Type of binary function to combine entries.</param>
     /// <param name="clContext">OpenCL context.</param>
     /// <param name="workGroupSize">Should be a power of 2 and greater than 1.</param>
+    let rec SpMSpVSimple
+        (add: Expr<'c option -> 'c option -> 'c option>)
+        (mul: Expr<'a option -> 'b option -> 'c option>)
+        (clContext: ClContext)
+        workGroupSize
+        =
+
+        let run =
+            SpMSpV.runSimple add mul clContext workGroupSize
+
+        fun (queue: MailboxProcessor<_>) (matrix: ClMatrix<'a>) (vector: ClVector<'b>) (mask: ClVector<'d>) ->
+            match matrix, vector, mask with
+            | ClMatrix.CSR m, ClVector.Sparse v, ClVector.Dense mask -> Option.map ClVector.Sparse (run queue m v mask)
+            | _ -> failwith "Not implemented yet"
+
+    /// <summary>
+    /// CSR Matrix - sparse vector multiplication.
+    /// </summary>
+    /// <param name="add">Type of binary function to reduce entries.</param>
+    /// <param name="mul">Type of binary function to combine entries.</param>
+    /// <param name="clContext">OpenCL context.</param>
+    /// <param name="workGroupSize">Should be a power of 2 and greater than 1.</param>
     let SpMSpV
         (add: Expr<'c option -> 'c option -> 'c option>)
         (mul: Expr<'a option -> 'b option -> 'c option>)
