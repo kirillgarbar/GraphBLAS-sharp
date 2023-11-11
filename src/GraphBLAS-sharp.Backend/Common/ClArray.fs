@@ -74,6 +74,8 @@ module ClArray =
             processor.Post(Msg.CreateRunMsg<_, _> kernel)
             value.Free processor
 
+            processor.PostAndReply(Msg.MsgNotifyMe)
+
             outputArray
 
     /// <summary>
@@ -779,5 +781,7 @@ module ClArray =
                 (sum processor bitmap).ToHostAndFree processor
 
             bitmap.Free processor
+
+            processor.PostAndReply(Msg.MsgNotifyMe)
 
             result

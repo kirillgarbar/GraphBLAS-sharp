@@ -456,6 +456,8 @@ module SpMSpV =
                 sortedIndices.Free queue
                 sortedValues.Free queue
 
+                queue.PostAndReply(Msg.MsgNotifyMe)
+
                 result
 
 

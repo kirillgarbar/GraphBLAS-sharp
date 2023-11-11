@@ -143,6 +143,8 @@ module internal SpMV =
 
             queue.Post(Msg.CreateFreeMsg intermediateArray)
 
+            queue.PostAndReply(Msg.MsgNotifyMe)
+
     let run
         (add: Expr<'c option -> 'c option -> 'c option>)
         (mul: Expr<'a option -> 'b option -> 'c option>)

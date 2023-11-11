@@ -205,6 +205,8 @@ module Vector =
             | ClVector.Dense vector, ClVector.Sparse mask -> assignBySparse processor vector mask value vector
             | _ -> failwith "Unsupported format"
 
+            processor.PostAndReply(Msg.MsgNotifyMe)
+
     /// <summary>
     /// Assign given value to all entries covered by mask.
     /// Does it in-place.
