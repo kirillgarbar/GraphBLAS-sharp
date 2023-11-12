@@ -1,4 +1,4 @@
-﻿namespace GraphBLAS.FSharp.Backend.Operations
+namespace GraphBLAS.FSharp.Backend.Operations
 
 open Brahma.FSharp
 open GraphBLAS.FSharp.Backend.Common
@@ -65,7 +65,7 @@ module SpMSpV =
                     inputArray.[i] <- 0 @>
 
         let sum =
-            PrefixSum.standardExcludeInPlace clContext workGroupSize
+            Scan.standardExcludeInPlace clContext workGroupSize
 
         let prepareOffsets = clContext.Compile prepareOffsets
 

@@ -158,7 +158,7 @@ module Vector =
             Map.map (Map.option 1 0) clContext workGroupSize
 
         let prefixSum =
-            Common.PrefixSum.standardExcludeInPlace clContext workGroupSize
+            Scan.standardExcludeInPlace clContext workGroupSize
 
         let allIndices =
             ClArray.init Map.id clContext workGroupSize
