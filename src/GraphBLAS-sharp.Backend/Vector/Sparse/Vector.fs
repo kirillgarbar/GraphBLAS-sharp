@@ -66,8 +66,6 @@ module Vector =
 
             processor.Post(Msg.CreateRunMsg<_, _>(kernel))
 
-            processor.PostAndReply(Msg.MsgNotifyMe)
-
             resultVector
 
     let reduce<'a when 'a: struct> (opAdd: Expr<'a -> 'a -> 'a>) (clContext: ClContext) workGroupSize =

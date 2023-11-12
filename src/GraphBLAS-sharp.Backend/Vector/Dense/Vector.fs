@@ -35,8 +35,6 @@ module Vector =
 
             map2InPlace processor leftVector rightVector resultVector
 
-            processor.PostAndReply(Msg.MsgNotifyMe)
-
     let map2<'a, 'b, 'c when 'a: struct and 'b: struct and 'c: struct>
         (opAdd: Expr<'a option -> 'b option -> 'c option>)
         (clContext: ClContext)
@@ -196,8 +194,6 @@ module Vector =
             processor.Post <| Msg.CreateFreeMsg<_>(allValues)
 
             processor.Post <| Msg.CreateFreeMsg<_>(positions)
-
-            processor.PostAndReply(Msg.MsgNotifyMe)
 
             { Context = clContext
               Indices = resultIndices
