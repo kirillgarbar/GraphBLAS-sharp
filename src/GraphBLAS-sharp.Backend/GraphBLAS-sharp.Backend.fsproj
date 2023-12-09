@@ -41,6 +41,8 @@
     <Compile Include="Common/Sort/Bitonic.fs" />
       
     <Compile Include="Common/Common.fs" />
+      
+    <Compile Include="Common/Scan.fs" />
 
     <Compile Include="Vector/Dense/Vector.fs" />
     <Compile Include="Vector/Sparse/Common.fs" />
