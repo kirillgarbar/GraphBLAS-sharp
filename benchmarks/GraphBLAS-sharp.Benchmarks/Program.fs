@@ -4,7 +4,7 @@ open BenchmarkDotNet.Running
 [<EntryPoint>]
 let main argv =
     let benchmarks =
-        BenchmarkSwitcher [| typeof<Algorithms.BFS.BFSPushPullWithoutTransferBenchmarkBool> |]
+        BenchmarkSwitcher [| typeof<Common.SetArgs.BenchmarkSetArgs> |]
 
     benchmarks.Run argv |> ignore
     0
