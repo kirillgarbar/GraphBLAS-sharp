@@ -225,6 +225,8 @@ module internal PrefixSumInternal =
     /// </example>
     /// <param name="clContext">ClContext.</param>
     /// <param name="workGroupSize">Should be a power of 2 and greater than 1.</param>
+    [<System.ObsoleteAttribute("This method is deprecated due to bad perfomance. Use method from Scan module instead.",
+                               false)>]
     let standardExcludeInPlace (clContext: ClContext) workGroupSize =
 
         let scan =
