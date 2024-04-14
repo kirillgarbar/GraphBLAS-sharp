@@ -41,7 +41,7 @@ module internal Map =
 
         let kernel = clContext.Compile <| preparePositions op
 
-        fun (processor: MailboxProcessor<_>) rowCount columnCount (values: ClArray<'a>) (rowPointers: ClArray<int>) (columns: ClArray<int>) ->
+        fun (processor: DeviceCommandQueue<_>) rowCount columnCount (values: ClArray<'a>) (rowPointers: ClArray<int>) (columns: ClArray<int>) ->
 
             let (resultLength: int) = columnCount * rowCount
 
@@ -94,7 +94,7 @@ module internal Map =
         let setPositions =
             Common.setPositions<'b> clContext workGroupSize
 
-        fun (queue: MailboxProcessor<_>) allocationMode (matrix: ClMatrix.CSR<'a>) ->
+        fun (queue: DeviceCommandQueue<_>) allocationMode (matrix: ClMatrix.CSR<'a>) ->
 
             let bitmap, values, rows, columns =
                 map queue matrix.RowCount matrix.ColumnCount matrix.Values matrix.RowPointers matrix.Columns
@@ -144,7 +144,7 @@ module internal Map =
 
             let kernel = clContext.Compile <| preparePositions op
 
-            fun (processor: MailboxProcessor<_>) (operand: ClCell<'a option>) (matrix: ClMatrix.CSR<'b>) ->
+            fun (processor: DeviceCommandQueue<_>) (operand: ClCell<'a option>) (matrix: ClMatrix.CSR<'b>) ->
 
                 let resultLength = matrix.RowCount * matrix.ColumnCount
 
@@ -198,7 +198,7 @@ module internal Map =
             let setPositions =
                 Common.setPositionsOption<'c> clContext workGroupSize
 
-            fun (queue: MailboxProcessor<_>) allocationMode (value: 'a option) (matrix: ClMatrix.CSR<'b>) ->
+            fun (queue: DeviceCommandQueue<_>) allocationMode (value: 'a option) (matrix: ClMatrix.CSR<'b>) ->
                 let valueClCell = clContext.CreateClCell value
 
                 let bitmap, values, rows, columns = mapWithValue queue valueClCell matrix

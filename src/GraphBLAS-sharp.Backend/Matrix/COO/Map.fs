@@ -40,7 +40,7 @@ module internal Map =
         let kernel =
             clContext.Compile <| preparePositions opAdd
 
-        fun (processor: MailboxProcessor<_>) rowCount columnCount (values: ClArray<'a>) (rowPointers: ClArray<int>) (columns: ClArray<int>) ->
+        fun (processor: DeviceCommandQueue<_>) rowCount columnCount (values: ClArray<'a>) (rowPointers: ClArray<int>) (columns: ClArray<int>) ->
 
             let (resultLength: int) = columnCount * rowCount
 
@@ -94,7 +94,7 @@ module internal Map =
         let setPositions =
             Common.setPositions<'b> clContext workGroupSize
 
-        fun (queue: MailboxProcessor<_>) allocationMode (matrix: ClMatrix.COO<'a>) ->
+        fun (queue: DeviceCommandQueue<_>) allocationMode (matrix: ClMatrix.COO<'a>) ->
 
             let bitmap, values, rows, columns =
                 map queue matrix.RowCount matrix.ColumnCount matrix.Values matrix.Rows matrix.Columns

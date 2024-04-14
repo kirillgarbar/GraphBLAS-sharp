@@ -50,8 +50,8 @@ let checkResult isZero isComplemented (actual: Vector<'a>) (vector: 'a []) (mask
 
 let makeTest<'a when 'a: struct and 'a: equality>
     (isZero: 'a -> bool)
-    (toDense: MailboxProcessor<_> -> AllocationFlag -> ClVector<'a> -> ClVector<'a>)
-    (fillVector: MailboxProcessor<Msg> -> AllocationFlag -> ClVector<'a> -> ClVector<'a> -> 'a -> ClVector<'a>)
+    (toDense: DeviceCommandQueue<_> -> AllocationFlag -> ClVector<'a> -> ClVector<'a>)
+    (fillVector: DeviceCommandQueue<Msg> -> AllocationFlag -> ClVector<'a> -> ClVector<'a> -> 'a -> ClVector<'a>)
     isComplemented
     case
     (vector: 'a [], mask: 'a [], value: 'a)

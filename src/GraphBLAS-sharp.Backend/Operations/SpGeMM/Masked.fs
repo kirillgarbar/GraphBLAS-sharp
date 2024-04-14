@@ -107,7 +107,7 @@ module internal Masked =
 
         let program = context.Compile(run)
 
-        fun (queue: MailboxProcessor<_>) (matrixLeft: ClMatrix.CSR<'a>) (matrixRight: ClMatrix.CSC<'b>) (mask: ClMatrix.COO<_>) ->
+        fun (queue: DeviceCommandQueue<_>) (matrixLeft: ClMatrix.CSR<'a>) (matrixRight: ClMatrix.CSC<'b>) (mask: ClMatrix.COO<_>) ->
 
             let values =
                 context.CreateClArrayWithSpecificAllocationMode<'c>(DeviceOnly, mask.NNZ)
@@ -160,7 +160,7 @@ module internal Masked =
         let scanInPlace =
             Common.PrefixSum.standardExcludeInPlace context workGroupSize
 
-        fun (queue: MailboxProcessor<_>) (matrixLeft: ClMatrix.CSR<'a>) (matrixRight: ClMatrix.CSC<'b>) (mask: ClMatrix.COO<_>) ->
+        fun (queue: DeviceCommandQueue<_>) (matrixLeft: ClMatrix.CSR<'a>) (matrixRight: ClMatrix.CSC<'b>) (mask: ClMatrix.COO<_>) ->
 
             let values, positions =
                 calculate queue matrixLeft matrixRight mask

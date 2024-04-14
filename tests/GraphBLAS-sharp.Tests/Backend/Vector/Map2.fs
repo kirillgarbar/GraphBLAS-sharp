@@ -10,6 +10,7 @@ open GraphBLAS.FSharp.Tests
 open GraphBLAS.FSharp.Objects
 open GraphBLAS.FSharp.Objects.ClVectorExtensions
 open GraphBLAS.FSharp.Objects.ClContextExtensions
+open Brahma.FSharp
 
 let logger = Log.create "Vector.ElementWise.Tests"
 
@@ -44,8 +45,8 @@ let correctnessGenericTest
     isEqual
     zero
     op
-    (addFun: MailboxProcessor<_> -> AllocationFlag -> ClVector<'a> -> ClVector<'a> -> ClVector<'a> option)
-    (toDense: MailboxProcessor<_> -> AllocationFlag -> ClVector<'a> -> ClVector<'a>)
+    (addFun: DeviceCommandQueue<_> -> AllocationFlag -> ClVector<'a> -> ClVector<'a> -> ClVector<'a> option)
+    (toDense: DeviceCommandQueue<_> -> AllocationFlag -> ClVector<'a> -> ClVector<'a>)
     case
     (leftArray: 'a [], rightArray: 'a [])
     =

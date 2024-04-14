@@ -19,7 +19,7 @@ module internal Common =
         let sum =
             Common.PrefixSum.standardExcludeInPlace clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (allRows: ClArray<int>) (allColumns: ClArray<int>) (allValues: ClArray<'a>) (positions: ClArray<int>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (allRows: ClArray<int>) (allColumns: ClArray<int>) (allValues: ClArray<'a>) (positions: ClArray<int>) ->
 
             let resultLength =
                 (sum processor positions).ToHostAndFree(processor)
@@ -54,7 +54,7 @@ module internal Common =
         let sum =
             Common.PrefixSum.standardExcludeInPlace clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (allRows: ClArray<int>) (allColumns: ClArray<int>) (allValues: ClArray<'a>) (positions: ClArray<int>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (allRows: ClArray<int>) (allColumns: ClArray<int>) (allValues: ClArray<'a>) (positions: ClArray<int>) ->
 
             let resultLength =
                 (sum processor positions).ToHostAndFree(processor)

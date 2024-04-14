@@ -25,7 +25,7 @@ module PrefixSum =
 
         let program = clContext.Compile(update)
 
-        fun (processor: MailboxProcessor<_>) (inputArray: ClArray<'a>) (inputArrayLength: int) (vertices: ClArray<'a>) (bunchLength: int) (mirror: bool) ->
+        fun (processor: DeviceCommandQueue<_>) (inputArray: ClArray<'a>) (inputArrayLength: int) (vertices: ClArray<'a>) (bunchLength: int) (mirror: bool) ->
 
             let kernel = program.GetKernel()
 
@@ -93,7 +93,7 @@ module PrefixSum =
 
         let program = clContext.Compile(scan)
 
-        fun (processor: MailboxProcessor<_>) (inputArray: ClArray<'a>) (inputArrayLength: int) (vertices: ClArray<'a>) (verticesLength: int) (totalSum: ClCell<'a>) (zero: 'a) (mirror: bool) ->
+        fun (processor: DeviceCommandQueue<_>) (inputArray: ClArray<'a>) (inputArrayLength: int) (vertices: ClArray<'a>) (verticesLength: int) (totalSum: ClCell<'a>) (zero: 'a) (mirror: bool) ->
 
             // TODO: передавать zero как константу
             let zero = clContext.CreateClCell(zero)
@@ -153,7 +153,9 @@ module PrefixSum =
 
         let update = update opAdd clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) (inputArray: ClArray<'a>) (zero: 'a) ->
+        fun (processor: DeviceCommandQueue<_>) (inputArray: ClArray<'a>) (zero: 'a) ->
+
+            failwith "AAAAAAAAAAAAAAAAAA"
 
             let firstVertices =
                 clContext.CreateClArray<'a>(
@@ -229,7 +231,7 @@ module PrefixSum =
         let scan =
             runExcludeInPlace <@ (+) @> clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) (inputArray: ClArray<int>) ->
+        fun (processor: DeviceCommandQueue<_>) (inputArray: ClArray<int>) ->
 
             scan processor inputArray 0
 
@@ -254,7 +256,7 @@ module PrefixSum =
         let scan =
             runIncludeInPlace <@ (+) @> clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) (inputArray: ClArray<int>) ->
+        fun (processor: DeviceCommandQueue<_>) (inputArray: ClArray<int>) ->
 
             scan processor inputArray 0
 
@@ -286,7 +288,7 @@ module PrefixSum =
 
             let kernel = clContext.Compile kernel
 
-            fun (processor: MailboxProcessor<_>) uniqueKeysCount (values: ClArray<'a>) (keys: ClArray<int>) (offsets: ClArray<int>) ->
+            fun (processor: DeviceCommandQueue<_>) uniqueKeysCount (values: ClArray<'a>) (keys: ClArray<int>) (offsets: ClArray<int>) ->
 
                 let kernel = kernel.GetKernel()
 

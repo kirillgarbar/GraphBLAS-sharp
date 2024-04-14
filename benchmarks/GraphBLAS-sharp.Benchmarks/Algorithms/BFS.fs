@@ -9,7 +9,6 @@ open GraphBLAS.FSharp.IO
 open GraphBLAS.FSharp.Benchmarks
 open GraphBLAS.FSharp.Objects
 open GraphBLAS.FSharp.Objects.ArraysExtensions
-open GraphBLAS.FSharp.Objects.MailboxProcessorExtensions
 open GraphBLAS.FSharp.Backend.Quotes
 
 [<AbstractClass>]
@@ -41,7 +40,7 @@ type Benchmarks<'elem when 'elem : struct>(
 
     member this.Processor =
         let p = (fst this.OclContextInfo).Queue
-        p.Error.Add(fun e -> failwithf "%A" e)
+        //p.Error.Add(fun e -> failwithf "%A" e)
         p
 
     static member AvailableContexts = Utils.availableContexts
@@ -114,12 +113,12 @@ type WithoutTransferBenchmark<'elem when 'elem : struct>(
     override this.GlobalSetup() =
         this.ReadMatrix()
         this.LoadMatrixToGPU()
-        finish this.Processor
+        this.Processor.Synchronize()
 
     [<IterationCleanup>]
     override this.IterationCleanup() =
         this.ClearResult()
-        finish this.Processor
+        this.Processor.Synchronize()
 
     [<GlobalCleanup>]
     override this.GlobalCleanup() =
@@ -128,7 +127,7 @@ type WithoutTransferBenchmark<'elem when 'elem : struct>(
     [<Benchmark>]
     override this.Benchmark() =
         this.BFS()
-        this.Processor.PostAndReply Msg.MsgNotifyMe
+        this.Processor.Synchronize()
 
 type BFSWithoutTransferBenchmarkBool() =
 
@@ -183,7 +182,7 @@ type WithTransferBenchmark<'elem when 'elem : struct>(
     [<GlobalSetup>]
     override this.GlobalSetup() =
         this.ReadMatrix()
-        finish this.Processor
+        this.Processor.Synchronize()
 
     [<GlobalCleanup>]
     override this.GlobalCleanup() =
@@ -193,7 +192,7 @@ type WithTransferBenchmark<'elem when 'elem : struct>(
     override this.IterationCleanup() =
         this.ClearInputMatrix()
         this.ClearResult()
-        finish this.Processor
+        this.Processor.Synchronize()
 
     [<Benchmark>]
     override this.Benchmark() =
@@ -202,7 +201,7 @@ type WithTransferBenchmark<'elem when 'elem : struct>(
         match this.ResultLevels with
         | ClVector.Dense result ->
             result.ToHost this.Processor |> ignore
-            this.Processor.PostAndReply Msg.MsgNotifyMe
+            this.Processor.Synchronize()
         | _ -> failwith "Impossible"
 
 type BFSWithTransferBenchmarkBool() =

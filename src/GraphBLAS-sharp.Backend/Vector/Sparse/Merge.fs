@@ -119,7 +119,7 @@ module internal Merge =
 
         let kernel = clContext.Compile merge
 
-        fun (processor: MailboxProcessor<_>) (firstVector: ClVector.Sparse<'a>) (secondVector: ClVector.Sparse<'b>) ->
+        fun (processor: DeviceCommandQueue<_>) (firstVector: ClVector.Sparse<'a>) (secondVector: ClVector.Sparse<'b>) ->
 
             let firstSide = firstVector.Indices.Length
 

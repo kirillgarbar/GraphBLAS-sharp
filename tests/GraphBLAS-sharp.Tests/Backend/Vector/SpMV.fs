@@ -51,7 +51,7 @@ let correctnessGenericTest
     zero
     sumOp
     mulOp
-    (spMV: MailboxProcessor<_> -> AllocationFlag -> ClMatrix<'a> -> ClVector<'a> -> ClVector<'a>)
+    (spMV: DeviceCommandQueue<_> -> AllocationFlag -> ClMatrix<'a> -> ClVector<'a> -> ClVector<'a>)
     (isEqual: 'a -> 'a -> bool)
     q
     (testContext: TestContext)
@@ -102,7 +102,7 @@ let createTest testContext (zero: 'a) isEqual add mul addQ mulQ =
 let testFixturesSpMV (testContext: TestContext) =
     [ let context = testContext.ClContext
       let q = testContext.Queue
-      q.Error.Add(fun e -> failwithf "%A" e)
+      //q.Error.Add(fun e -> failwithf "%A" e)
 
       createTest testContext false (=) (||) (&&) ArithmeticOperations.boolSumOption ArithmeticOperations.boolMulOption
       createTest testContext 0 (=) (+) (*) ArithmeticOperations.intSumOption ArithmeticOperations.intMulOption

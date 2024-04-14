@@ -34,7 +34,7 @@ module internal BFS =
         let containsNonZero =
             Vector.exists Predicates.isSome clContext workGroupSize
 
-        fun (queue: MailboxProcessor<Msg>) (matrix: ClMatrix<bool>) (source: int) ->
+        fun (queue: DeviceCommandQueue<Msg>) (matrix: ClMatrix<bool>) (source: int) ->
             let vertexCount = matrix.RowCount
 
             let levels =
@@ -87,7 +87,7 @@ module internal BFS =
         let fillSubVectorTo =
             Vector.assignByMaskInPlace Mask.assign clContext workGroupSize
 
-        fun (queue: MailboxProcessor<Msg>) (matrix: ClMatrix<bool>) (source: int) ->
+        fun (queue: DeviceCommandQueue<Msg>) (matrix: ClMatrix<bool>) (source: int) ->
             let vertexCount = matrix.RowCount
 
             let levels =
@@ -159,7 +159,7 @@ module internal BFS =
             ClArray.count Predicates.isSome clContext workGroupSize
 
         //Push or pull functions
-        let getNNZ (queue: MailboxProcessor<Msg>) (v: ClVector<bool>) =
+        let getNNZ (queue: DeviceCommandQueue<Msg>) (v: ClVector<bool>) =
             match v with
             | ClVector.Sparse v -> v.NNZ
             | ClVector.Dense v -> countNNZ queue v
@@ -169,7 +169,7 @@ module internal BFS =
         let push nnz size =
             (float32 nnz) / (float32 size) <= SPARSITY
 
-        fun (queue: MailboxProcessor<Msg>) (matrix: ClMatrix<bool>) (source: int) ->
+        fun (queue: DeviceCommandQueue<Msg>) (matrix: ClMatrix<bool>) (source: int) ->
             let vertexCount = matrix.RowCount
 
             let levels =

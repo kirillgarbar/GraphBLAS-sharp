@@ -16,7 +16,7 @@ module PageRank =
     type PageRankMatrix =
         | PreparedMatrix of ClMatrix<float32>
 
-        member this.Dispose(processor: MailboxProcessor<Msg>) =
+        member this.Dispose(processor: DeviceCommandQueue<Msg>) =
             match this with
             | PreparedMatrix matrix -> matrix.Dispose processor
 
@@ -38,7 +38,7 @@ module PageRank =
         let zeroCreate =
             GraphBLAS.FSharp.ClArray.zeroCreate clContext workGroupSize
 
-        fun (queue: MailboxProcessor<Msg>) (matrix: ClMatrix.CSR<float32>) ->
+        fun (queue: DeviceCommandQueue<Msg>) (matrix: ClMatrix.CSR<float32>) ->
             let outDegree: ClArray<int option> =
                 zeroCreate queue DeviceOnly matrix.ColumnCount
 
@@ -96,7 +96,7 @@ module PageRank =
 
         let multiply = clContext.Compile multiply
 
-        fun (queue: MailboxProcessor<Msg>) (matrix: ClMatrix<float32>) ->
+        fun (queue: DeviceCommandQueue<Msg>) (matrix: ClMatrix<float32>) ->
 
             match matrix with
             | ClMatrix.CSR matrix ->
@@ -162,7 +162,7 @@ module PageRank =
         let create =
             GraphBLAS.FSharp.Vector.create clContext workGroupSize
 
-        fun (queue: MailboxProcessor<Msg>) (PreparedMatrix matrix) accuracy ->
+        fun (queue: DeviceCommandQueue<Msg>) (PreparedMatrix matrix) accuracy ->
             let vertexCount = matrix.RowCount
 
             //None is 0

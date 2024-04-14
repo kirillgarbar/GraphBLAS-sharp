@@ -57,7 +57,7 @@ let testFixtures plus (plusQ: Expr<'a -> 'a -> 'a>) zero name =
 
 let tests =
 
-    q.Error.Add(fun e -> failwithf "%A" e)
+    //q.Error.Add(fun e -> failwithf "%A" e)
 
     [ testFixtures (+) <@ (+) @> 0 "int add"
       testFixtures (+) <@ (+) @> 0uy "byte add"

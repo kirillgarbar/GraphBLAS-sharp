@@ -18,7 +18,7 @@ module Vector =
 
         let map = Map.map op clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (leftVector: ClArray<'a option>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (leftVector: ClArray<'a option>) ->
 
             map processor allocationMode leftVector
 
@@ -31,7 +31,7 @@ module Vector =
         let map2InPlace =
             Map.map2InPlace opAdd clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) (leftVector: ClArray<'a option>) (rightVector: ClArray<'b option>) (resultVector: ClArray<'c option>) ->
+        fun (processor: DeviceCommandQueue<_>) (leftVector: ClArray<'a option>) (rightVector: ClArray<'b option>) (resultVector: ClArray<'c option>) ->
 
             map2InPlace processor leftVector rightVector resultVector
 
@@ -43,7 +43,7 @@ module Vector =
 
         let map2 = Map.map2 opAdd clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (leftVector: ClArray<'a option>) (rightVector: ClArray<'b option>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (leftVector: ClArray<'a option>) (rightVector: ClArray<'b option>) ->
 
             map2 processor allocationMode leftVector rightVector
 
@@ -66,7 +66,7 @@ module Vector =
 
         let kernel = clContext.Compile(fillSubVectorKernel)
 
-        fun (processor: MailboxProcessor<_>) (leftVector: ClArray<'a option>) (maskVector: ClArray<'b option>) (value: 'a) (resultVector: ClArray<'a option>) ->
+        fun (processor: DeviceCommandQueue<_>) (leftVector: ClArray<'a option>) (maskVector: ClArray<'b option>) (value: 'a) (resultVector: ClArray<'a option>) ->
 
             let ndRange =
                 Range1D.CreateValid(leftVector.Length, workGroupSize)
@@ -93,7 +93,7 @@ module Vector =
         let assignByMask =
             assignByMaskInPlace maskOp clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (leftVector: ClArray<'a option>) (maskVector: ClArray<'b option>) (value: 'a) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (leftVector: ClArray<'a option>) (maskVector: ClArray<'b option>) (value: 'a) ->
             let resultVector =
                 clContext.CreateClArrayWithSpecificAllocationMode(allocationMode, leftVector.Length)
 
@@ -118,7 +118,7 @@ module Vector =
 
         let kernel = clContext.Compile(fillSubVectorKernel)
 
-        fun (processor: MailboxProcessor<_>) (leftVector: ClArray<'a option>) (maskVector: Sparse<'b>) (value: 'a) (resultVector: ClArray<'a option>) ->
+        fun (processor: DeviceCommandQueue<_>) (leftVector: ClArray<'a option>) (maskVector: Sparse<'b>) (value: 'a) (resultVector: ClArray<'a option>) ->
 
             let ndRange =
                 Range1D.CreateValid(maskVector.NNZ, workGroupSize)
@@ -164,7 +164,7 @@ module Vector =
         let allValues =
             Map.map (Map.optionToValueOrZero Unchecked.defaultof<'a>) clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (vector: ClArray<'a option>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (vector: ClArray<'a option>) ->
 
             let positions = getBitmap processor DeviceOnly vector
 
@@ -208,7 +208,7 @@ module Vector =
         let reduce =
             Common.Reduce.reduce opAdd clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) (vector: ClArray<'a option>) ->
+        fun (processor: DeviceCommandQueue<_>) (vector: ClArray<'a option>) ->
             choose processor DeviceOnly vector
             |> function
                 | Some values ->
@@ -229,7 +229,7 @@ module Vector =
         let map =
             Backend.Common.Map.map <@ Some @> clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode size (elements: (int * 'a) list) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode size (elements: (int * 'a) list) ->
             let indices, values = elements |> Array.ofList |> Array.unzip
 
             let values =

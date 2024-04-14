@@ -10,6 +10,7 @@ open GraphBLAS.FSharp.Tests.TestCases
 open Microsoft.FSharp.Collections
 open Microsoft.FSharp.Core
 open GraphBLAS.FSharp.Objects
+open Brahma.FSharp
 
 let config = Utils.defaultConfig
 
@@ -59,7 +60,7 @@ let correctnessGenericTest
     some
     sumOp
     mulOp
-    (spMV: MailboxProcessor<_> -> ClMatrix<'a> -> ClVector<'a> -> ClVector<'a> option)
+    (spMV: DeviceCommandQueue<_> -> ClMatrix<'a> -> ClVector<'a> -> ClVector<'a> option)
     (isEqual: 'a -> 'a -> bool)
     q
     (testContext: TestContext)
@@ -114,7 +115,7 @@ let createTest spmspv testContext (zero: 'a) some isEqual add mul addQ mulQ =
 let testFixturesSpMSpV (testContext: TestContext) =
     [ let context = testContext.ClContext
       let q = testContext.Queue
-      q.Error.Add(fun e -> failwithf "%A" e)
+      //q.Error.Add(fun e -> failwithf "%A" e)
 
       createTest
           Operations.SpMSpVBool

@@ -8,6 +8,7 @@ open GraphBLAS.FSharp.Objects.MatrixExtensions
 open GraphBLAS.FSharp.Test
 open GraphBLAS.FSharp.Tests
 open GraphBLAS.FSharp.Tests.Context
+open Brahma.FSharp
 
 let logger = Log.create "SpGeMM.Masked.Tests"
 
@@ -66,7 +67,7 @@ let tests =
               arbitrary = [ typeof<Generators.PairOfMatricesOfCompatibleSizeWithMask> ] }
 
     let q = defaultContext.Queue
-    q.Error.Add(fun e -> failwithf "%A" e)
+    //q.Error.Add(fun e -> failwithf "%A" e)
 
     [ let add =
           <@ fun x y ->

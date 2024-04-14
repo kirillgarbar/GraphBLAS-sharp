@@ -211,7 +211,7 @@ module Common =
         /// <param name="workGroupSize">Should be a power of 2 and greater than 1.</param>
         /// <param name="plus">Associative binary operation.</param>
         /// <param name="zero">Zero element for binary operation.</param>
-        let runExcludeInPlace plus = PrefixSum.runExcludeInPlace plus
+        let runExcludeInPlace plus = ScanInternal.runExcludeInPlace plus
 
         /// <summary>
         /// Include in-place prefix sum.
@@ -267,7 +267,7 @@ module Common =
         /// > val sum = [| 4 |]
         /// </code>
         /// </example>
-        let standardExcludeInPlace = PrefixSum.standardExcludeInPlace
+        let standardExcludeInPlace = ScanInternal.standardExcludeInPlace
 
         /// <summary>
         /// Include in-place prefix sum of integer array with addition operation and start value that is equal to 0.

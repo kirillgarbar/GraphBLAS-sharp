@@ -25,7 +25,7 @@ module Map =
 
         let kernel = clContext.Compile map
 
-        fun (processor: MailboxProcessor<_>) allocationMode (inputArray: ClArray<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (inputArray: ClArray<'a>) ->
 
             let result =
                 clContext.CreateClArrayWithSpecificAllocationMode(allocationMode, inputArray.Length)
@@ -60,7 +60,7 @@ module Map =
 
         let kernel = clContext.Compile map
 
-        fun (processor: MailboxProcessor<_>) (inputArray: ClArray<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) (inputArray: ClArray<'a>) ->
 
             let ndRange =
                 Range1D.CreateValid(inputArray.Length, workGroupSize)
@@ -91,7 +91,7 @@ module Map =
 
         let kernel = clContext.Compile map
 
-        fun (processor: MailboxProcessor<_>) allocationMode (value: 'a) (inputArray: ClArray<'b>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (value: 'a) (inputArray: ClArray<'b>) ->
 
             let result =
                 clContext.CreateClArrayWithSpecificAllocationMode(allocationMode, inputArray.Length)
@@ -136,7 +136,7 @@ module Map =
 
         let kernel = clContext.Compile kernel
 
-        fun (processor: MailboxProcessor<_>) (leftArray: ClArray<'a>) (rightArray: ClArray<'b>) (resultArray: ClArray<'c>) ->
+        fun (processor: DeviceCommandQueue<_>) (leftArray: ClArray<'a>) (rightArray: ClArray<'b>) (resultArray: ClArray<'c>) ->
 
             let ndRange =
                 Range1D.CreateValid(resultArray.Length, workGroupSize)
@@ -164,7 +164,7 @@ module Map =
         let map2 =
             map2InPlace<'a, 'b, 'c> map clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (leftArray: ClArray<'a>) (rightArray: ClArray<'b>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (leftArray: ClArray<'a>) (rightArray: ClArray<'b>) ->
 
             let resultArray =
                 clContext.CreateClArrayWithSpecificAllocationMode(allocationMode, leftArray.Length)

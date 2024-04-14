@@ -65,7 +65,7 @@ let testFixtures plus plusQ zero isEqual name =
     |> testPropertyWithConfig config $"Correctness on %s{name}"
 
 let tests =
-    q.Error.Add(fun e -> failwithf "%A" e)
+    //q.Error.Add(fun e -> failwithf "%A" e)
 
     [ testFixtures (+) <@ (+) @> 0 (=) "int add"
       testFixtures (+) <@ (+) @> 0uy (=) "byte add"

@@ -20,7 +20,7 @@ module internal Expand =
         let prefixSum =
             Common.PrefixSum.standardExcludeInPlace clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) (leftMatrixColumns: ClArray<int>) (rightMatrixRowsLengths: ClArray<int>) ->
+        fun (processor: DeviceCommandQueue<_>) (leftMatrixColumns: ClArray<int>) (rightMatrixRowsLengths: ClArray<int>) ->
 
             let segmentsLengths =
                 clContext.CreateClArrayWithSpecificAllocationMode(DeviceOnly, leftMatrixColumns.Length)
@@ -48,7 +48,7 @@ module internal Expand =
         let scatter =
             Common.Scatter.lastOccurrence clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) (firstValues: ClArray<'a>) (secondValues: ClArray<'b>) (columns: ClArray<int>) (rows: ClArray<int>) ->
+        fun (processor: DeviceCommandQueue<_>) (firstValues: ClArray<'a>) (secondValues: ClArray<'b>) (columns: ClArray<int>) (rows: ClArray<int>) ->
 
             let positions =
                 getBitmap processor DeviceOnly firstValues secondValues
@@ -112,7 +112,7 @@ module internal Expand =
         let rightMatrixGather =
             Common.Gather.run clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) (lengths: int) (segmentsPointers: ClArray<int>) (leftMatrix: ClMatrix.COO<'a>) (rightMatrix: ClMatrix.CSR<'b>) ->
+        fun (processor: DeviceCommandQueue<_>) (lengths: int) (segmentsPointers: ClArray<int>) (leftMatrix: ClMatrix.COO<'a>) (rightMatrix: ClMatrix.CSR<'b>) ->
             // Compute left matrix positions
             let leftMatrixPositions = zeroCreate processor DeviceOnly lengths
 
@@ -182,7 +182,7 @@ module internal Expand =
         let sortKeys =
             Common.Sort.Radix.standardRunKeysOnly clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) (values: ClArray<'a>) (columns: ClArray<int>) (rows: ClArray<int>) ->
+        fun (processor: DeviceCommandQueue<_>) (values: ClArray<'a>) (columns: ClArray<int>) (rows: ClArray<int>) ->
             // sort by columns
             let valuesSortedByColumns =
                 sortByKeyValues processor DeviceOnly columns values
@@ -221,7 +221,7 @@ module internal Expand =
         let idScatter =
             Common.Scatter.initFirstOccurrence Map.id clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (values: ClArray<'a>) (columns: ClArray<int>) (rows: ClArray<int>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (values: ClArray<'a>) (columns: ClArray<int>) (rows: ClArray<int>) ->
 
             let bitmap =
                 getUniqueBitmap processor DeviceOnly columns rows
@@ -259,7 +259,7 @@ module internal Expand =
 
         let reduce = reduce opAdd clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (rightMatrixRowsNNZ: ClArray<int>) (rightMatrix: ClMatrix.CSR<'b>) (leftMatrix: ClMatrix.COO<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (rightMatrixRowsNNZ: ClArray<int>) (rightMatrix: ClMatrix.CSR<'b>) (leftMatrix: ClMatrix.COO<'a>) ->
 
             let length, segmentPointers =
                 getSegmentPointers processor leftMatrix.Columns rightMatrixRowsNNZ
@@ -316,7 +316,7 @@ module internal Expand =
         let expandRowPointers =
             CSR.Matrix.expandRowPointers clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (leftMatrix: ClMatrix.CSR<'a>) rightMatrixRowsNNZ (rightMatrix: ClMatrix.CSR<'b>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (leftMatrix: ClMatrix.CSR<'a>) rightMatrixRowsNNZ (rightMatrix: ClMatrix.CSR<'b>) ->
 
             let rows =
                 expandRowPointers processor DeviceOnly leftMatrix
@@ -360,7 +360,7 @@ module internal Expand =
         let runCOO =
             runCOO opAdd opMul clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode maxAllocSize generalLength (leftMatrix: ClMatrix.CSR<'a>) segmentLengths rightMatrixRowsNNZ (rightMatrix: ClMatrix.CSR<'b>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode maxAllocSize generalLength (leftMatrix: ClMatrix.CSR<'a>) segmentLengths rightMatrixRowsNNZ (rightMatrix: ClMatrix.CSR<'b>) ->
             // extract segment lengths by left matrix rows pointers
             let segmentPointersByLeftMatrixRows =
                 clContext.CreateClArrayWithSpecificAllocationMode(DeviceOnly, leftMatrix.RowPointers.Length)
@@ -438,7 +438,7 @@ module internal Expand =
         let runManySteps =
             runManySteps opAdd opMul clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode maxAllocSize (leftMatrix: ClMatrix.CSR<'a>) (rightMatrix: ClMatrix.CSR<'b>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode maxAllocSize (leftMatrix: ClMatrix.CSR<'a>) (rightMatrix: ClMatrix.CSR<'b>) ->
 
             let rightMatrixRowsNNZ =
                 getNNZInRows processor DeviceOnly rightMatrix
@@ -505,7 +505,7 @@ module internal Expand =
             let runCOO =
                 runCOO opAdd opMul clContext workGroupSize
 
-            fun (processor: MailboxProcessor<_>) allocationMode (leftMatrix: ClMatrix.COO<'a>) rightMatrixRowsNNZ (rightMatrix: ClMatrix.CSR<'b>) ->
+            fun (processor: DeviceCommandQueue<_>) allocationMode (leftMatrix: ClMatrix.COO<'a>) rightMatrixRowsNNZ (rightMatrix: ClMatrix.CSR<'b>) ->
 
                 let _, result =
                     runCOO processor allocationMode rightMatrixRowsNNZ rightMatrix leftMatrix
@@ -539,7 +539,7 @@ module internal Expand =
             let runCOO =
                 runCOO opAdd opMul clContext workGroupSize
 
-            fun (processor: MailboxProcessor<_>) allocationMode maxAllocSize generalLength (leftMatrix: ClMatrix.COO<'a>) segmentLengths rightMatrixRowsNNZ (rightMatrix: ClMatrix.CSR<'b>) ->
+            fun (processor: DeviceCommandQueue<_>) allocationMode maxAllocSize generalLength (leftMatrix: ClMatrix.COO<'a>) segmentLengths rightMatrixRowsNNZ (rightMatrix: ClMatrix.CSR<'b>) ->
 
                 let leftRowPointers =
                     compress processor allocationMode leftMatrix.Rows leftMatrix.RowCount
@@ -621,7 +621,7 @@ module internal Expand =
             let runManySteps =
                 runManySteps opAdd opMul clContext workGroupSize
 
-            fun (processor: MailboxProcessor<_>) allocationMode maxAllocSize (leftMatrix: ClMatrix.COO<'a>) (rightMatrix: ClMatrix.CSR<'b>) ->
+            fun (processor: DeviceCommandQueue<_>) allocationMode maxAllocSize (leftMatrix: ClMatrix.COO<'a>) (rightMatrix: ClMatrix.CSR<'b>) ->
 
                 let rightMatrixRowsNNZ =
                     getNNZInRows processor DeviceOnly rightMatrix

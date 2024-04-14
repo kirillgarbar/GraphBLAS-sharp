@@ -28,7 +28,7 @@ module ClArray =
 
         let program = clContext.Compile(init)
 
-        fun (processor: MailboxProcessor<_>) allocationMode (length: int) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (length: int) ->
             let outputArray =
                 clContext.CreateClArrayWithSpecificAllocationMode(allocationMode, length)
 
@@ -59,7 +59,7 @@ module ClArray =
 
         let program = clContext.Compile(create)
 
-        fun (processor: MailboxProcessor<_>) allocationMode (length: int) (value: 'a) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (length: int) (value: 'a) ->
             let value = clContext.CreateClCell(value)
 
             let outputArray =
@@ -85,7 +85,7 @@ module ClArray =
 
         let create = create clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode length ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode length ->
             create processor allocationMode length Unchecked.defaultof<'a>
 
     /// <summary>
@@ -104,7 +104,7 @@ module ClArray =
 
         let program = clContext.Compile(copy)
 
-        fun (processor: MailboxProcessor<_>) allocationMode (inputArray: ClArray<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (inputArray: ClArray<'a>) ->
             let ndRange =
                 Range1D.CreateValid(inputArray.Length, workGroupSize)
 
@@ -137,7 +137,7 @@ module ClArray =
 
         let program = clContext.Compile(copy)
 
-        fun (processor: MailboxProcessor<_>) (source: ClArray<'a>) (destination: ClArray<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) (source: ClArray<'a>) (destination: ClArray<'a>) ->
             if source.Length <> destination.Length then
                 failwith "The source array length differs from the destination array length."
 
@@ -167,7 +167,7 @@ module ClArray =
 
         let kernel = clContext.Compile(replicate)
 
-        fun (processor: MailboxProcessor<_>) allocationMode (inputArray: ClArray<'a>) count ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (inputArray: ClArray<'a>) count ->
             let outputArrayLength = inputArray.Length * count
 
             let outputArray =
@@ -202,15 +202,15 @@ module ClArray =
             Bitmap.lastOccurrence clContext workGroupSize
 
         let prefixSumExclude =
-            PrefixSum.runExcludeInPlace <@ (+) @> clContext workGroupSize
+            ScanInternal.standardExcludeInPlace clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) (inputArray: ClArray<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) (inputArray: ClArray<'a>) ->
 
             let bitmap =
                 getUniqueBitmap processor DeviceOnly inputArray
 
             let resultLength =
-                (prefixSumExclude processor bitmap 0)
+                (prefixSumExclude processor bitmap)
                     .ToHostAndFree(processor)
 
             let outputArray =
@@ -242,7 +242,7 @@ module ClArray =
 
         let kernel = clContext.Compile exists
 
-        fun (processor: MailboxProcessor<_>) (vector: ClArray<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) (vector: ClArray<'a>) ->
 
             let result = clContext.CreateClCell false
 
@@ -284,7 +284,7 @@ module ClArray =
 
         let kernel = clContext.Compile assign
 
-        fun (processor: MailboxProcessor<_>) (values: ClArray<'a>) (positions: ClArray<int>) (result: ClArray<'b>) ->
+        fun (processor: DeviceCommandQueue<_>) (values: ClArray<'a>) (positions: ClArray<int>) (result: ClArray<'b>) ->
 
             if values.Length <> positions.Length then
                 failwith "Lengths must be the same"
@@ -314,12 +314,12 @@ module ClArray =
             Map.map<'a, int> (Map.chooseBitmap predicate) clContext workGroupSize
 
         let prefixSum =
-            PrefixSum.standardExcludeInPlace clContext workGroupSize
+            ScanInternal.standardExcludeInPlace clContext workGroupSize
 
         let assignValues =
             assignOption predicate clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (sourceValues: ClArray<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (sourceValues: ClArray<'a>) ->
 
             let positions =
                 getBitmap processor DeviceOnly sourceValues
@@ -371,7 +371,7 @@ module ClArray =
 
         let kernel = clContext.Compile assign
 
-        fun (processor: MailboxProcessor<_>) (firstValues: ClArray<'a>) (secondValues: ClArray<'b>) (positions: ClArray<int>) (result: ClArray<'c>) ->
+        fun (processor: DeviceCommandQueue<_>) (firstValues: ClArray<'a>) (secondValues: ClArray<'b>) (positions: ClArray<int>) (result: ClArray<'c>) ->
 
             if firstValues.Length <> secondValues.Length
                || secondValues.Length <> positions.Length then
@@ -410,12 +410,12 @@ module ClArray =
             Map.map2<'a, 'b, int> (Map.choose2Bitmap predicate) clContext workGroupSize
 
         let prefixSum =
-            PrefixSum.standardExcludeInPlace clContext workGroupSize
+            ScanInternal.standardExcludeInPlace clContext workGroupSize
 
         let assignValues =
             assignOption2 predicate clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (firstValues: ClArray<'a>) (secondValues: ClArray<'b>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (firstValues: ClArray<'a>) (secondValues: ClArray<'b>) ->
 
             let positions =
                 getBitmap processor DeviceOnly firstValues secondValues
@@ -450,7 +450,7 @@ module ClArray =
 
         let kernel = clContext.Compile kernel
 
-        fun (processor: MailboxProcessor<_>) allocationMode (sourceArray: ClArray<'a>) startIndex count ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (sourceArray: ClArray<'a>) startIndex count ->
             if count <= 0 then
                 failwith "Count must be greater than zero"
 
@@ -486,7 +486,7 @@ module ClArray =
 
         let sub = sub clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode chunkSize (sourceArray: ClArray<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode chunkSize (sourceArray: ClArray<'a>) ->
             if chunkSize <= 0 then
                 failwith "The size of the chunk cannot be less than 1"
 
@@ -513,7 +513,7 @@ module ClArray =
 
         let chunkBySizeLazy = lazyChunkBySize clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode chunkSize (sourceArray: ClArray<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode chunkSize (sourceArray: ClArray<'a>) ->
             chunkBySizeLazy processor allocationMode chunkSize sourceArray
             |> Seq.map (fun lazyValue -> lazyValue.Value)
             |> Seq.toArray
@@ -538,7 +538,7 @@ module ClArray =
 
         let kernel = clContext.Compile assign
 
-        fun (processor: MailboxProcessor<_>) (sourceArray: ClArray<'a>) sourceIndex (targetArray: ClArray<'a>) targetIndex count ->
+        fun (processor: DeviceCommandQueue<_>) (sourceArray: ClArray<'a>) sourceIndex (targetArray: ClArray<'a>) targetIndex count ->
             if count = 0 then
                 // nothing to do
                 ()
@@ -575,7 +575,7 @@ module ClArray =
 
         let blit = blit clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (sourceArrays: ClArray<'a> seq) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (sourceArrays: ClArray<'a> seq) ->
 
             let resultLength =
                 sourceArrays
@@ -613,7 +613,7 @@ module ClArray =
 
         let kernel = clContext.Compile fill
 
-        fun (processor: MailboxProcessor<_>) value firstPosition count (targetArray: ClArray<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) value firstPosition count (targetArray: ClArray<'a>) ->
             if count = 0 then
                 ()
             else
@@ -651,7 +651,7 @@ module ClArray =
         let map =
             Map.map2 <@ fun first second -> (first, second) @> clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (values: ClArray<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (values: ClArray<'a>) ->
             if values.Length > 1 then
                 let resultLength = values.Length - 1
 
@@ -693,7 +693,7 @@ module ClArray =
 
         let program = clContext.Compile(kernel)
 
-        fun (processor: MailboxProcessor<_>) (values: ClArray<'a>) (value: ClCell<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) (values: ClArray<'a>) (value: ClCell<'a>) ->
             let result =
                 clContext.CreateClCell Unchecked.defaultof<'b>
 
@@ -744,7 +744,7 @@ module ClArray =
 
         let program = clContext.Compile kernel
 
-        fun (processor: MailboxProcessor<_>) (index: int) (array: ClArray<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) (index: int) (array: ClArray<'a>) ->
 
             if index < 0 || index >= array.Length then
                 failwith "Index out of range"
@@ -778,7 +778,7 @@ module ClArray =
 
         let program = clContext.Compile kernel
 
-        fun (processor: MailboxProcessor<_>) (array: ClArray<'a>) (index: int) (value: 'a) ->
+        fun (processor: DeviceCommandQueue<_>) (array: ClArray<'a>) (index: int) (value: 'a) ->
 
             if index < 0 || index >= array.Length then
                 failwith "Index out of range"
@@ -800,7 +800,7 @@ module ClArray =
         let getBitmap =
             Map.map<'a, int> (Map.predicateBitmap predicate) clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) (array: ClArray<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) (array: ClArray<'a>) ->
 
             let bitmap = getBitmap processor DeviceOnly array
 
@@ -878,12 +878,12 @@ module ClArray =
             mapInPlace ArithmeticOperations.intNotQ clContext workGroupSize
 
         let prefixSum =
-            PrefixSum.standardExcludeInPlace clContext workGroupSize
+            ScanInternal.standardExcludeInPlace clContext workGroupSize
 
         let scatter =
             Scatter.lastOccurrence clContext workGroupSize
 
-        fun (queue: MailboxProcessor<_>) allocationMode (excludeBitmap: ClArray<int>) (inputArray: ClArray<'a>) ->
+        fun (queue: DeviceCommandQueue<_>) allocationMode (excludeBitmap: ClArray<int>) (inputArray: ClArray<'a>) ->
 
             invert queue excludeBitmap
 

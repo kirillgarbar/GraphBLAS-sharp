@@ -15,7 +15,7 @@ module Vector =
 
         let copyData = ClArray.copy clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (vector: Sparse<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (vector: Sparse<'a>) ->
             { Context = clContext
               Indices = copy processor allocationMode vector.Indices
               Values = copyData processor allocationMode vector.Values
@@ -26,7 +26,7 @@ module Vector =
 
         let copyDataTo = ClArray.copyTo clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) (source: Sparse<'a>) (destination: Sparse<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) (source: Sparse<'a>) (destination: Sparse<'a>) ->
             copyTo processor source.Indices destination.Indices
             copyDataTo processor source.Values destination.Values
 
@@ -59,7 +59,7 @@ module Vector =
         let create =
             ClArray.zeroCreate clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (vector: ClVector.Sparse<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (vector: ClVector.Sparse<'a>) ->
             let resultVector =
                 create processor allocationMode vector.Size
 
@@ -83,7 +83,7 @@ module Vector =
         let reduce =
             Common.Reduce.reduce opAdd clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) (vector: ClVector.Sparse<'a>) -> reduce processor vector.Values
+        fun (processor: DeviceCommandQueue<_>) (vector: ClVector.Sparse<'a>) -> reduce processor vector.Values
 
     let ofList (clContext: ClContext) allocationMode size (elements: (int * 'a) list) =
         let indices, values =

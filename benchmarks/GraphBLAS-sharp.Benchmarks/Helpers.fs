@@ -15,7 +15,7 @@ open Expecto
 module Utils =
     type BenchmarkContext =
         { ClContext: Brahma.FSharp.ClContext
-          Queue: MailboxProcessor<Msg> }
+          Queue: DeviceCommandQueue<Msg> }
 
     let getMatricesFilenames configFilename =
         let getFullPathToConfig filename =

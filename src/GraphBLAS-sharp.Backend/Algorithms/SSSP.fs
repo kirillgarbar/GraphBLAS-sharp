@@ -33,7 +33,7 @@ module internal SSSP =
         let containsNonZero =
             Vector.exists Predicates.isSome clContext workGroupSize
 
-        fun (queue: MailboxProcessor<Msg>) (matrix: ClMatrix<int>) (source: int) ->
+        fun (queue: DeviceCommandQueue<Msg>) (matrix: ClMatrix<int>) (source: int) ->
             let vertexCount = matrix.RowCount
 
             //None is System.Int32.MaxValue

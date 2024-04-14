@@ -10,6 +10,7 @@ open TestCases
 open GraphBLAS.FSharp.Objects
 open GraphBLAS.FSharp.Objects.ClVectorExtensions
 open GraphBLAS.FSharp.Objects.ClContextExtensions
+open Brahma.FSharp
 
 let logger = Log.create "Vector.zeroCreate.Tests"
 
@@ -30,7 +31,7 @@ let checkResult size (actual: Vector<'a>) =
         Expect.equal vector.Indices [| 0 |] "The index array must contain the 0"
 
 let correctnessGenericTest<'a when 'a: struct and 'a: equality>
-    (zeroCreate: MailboxProcessor<_> -> AllocationFlag -> int -> VectorFormat -> ClVector<'a>)
+    (zeroCreate: DeviceCommandQueue<_> -> AllocationFlag -> int -> VectorFormat -> ClVector<'a>)
     (case: OperationCase<VectorFormat>)
     (vectorSize: int)
     =
@@ -69,7 +70,7 @@ let testFixtures case =
     let context = case.TestContext.ClContext
     let q = case.TestContext.Queue
 
-    q.Error.Add(fun e -> failwithf "%A" e)
+    //q.Error.Add(fun e -> failwithf "%A" e)
 
     [ createTest<int> case
       createTest<byte> case

@@ -132,7 +132,7 @@ module Merge =
 
         let kernel = clContext.Compile(merge)
 
-        fun (processor: MailboxProcessor<_>) (leftMatrix: ClMatrix.COO<'a>) (rightMatrix: ClMatrix.COO<'b>) ->
+        fun (processor: DeviceCommandQueue<_>) (leftMatrix: ClMatrix.COO<'a>) (rightMatrix: ClMatrix.COO<'b>) ->
 
             let firstSide = leftMatrix.Columns.Length
             let secondSide = rightMatrix.Columns.Length
@@ -199,7 +199,7 @@ module Merge =
 
         let merge = run clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) (leftMatrix: ClMatrix.COO<'a>) (rightMatrix: ClMatrix.COO<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) (leftMatrix: ClMatrix.COO<'a>) (rightMatrix: ClMatrix.COO<'a>) ->
 
             let length =
                 leftMatrix.Columns.Length

@@ -51,7 +51,7 @@ let testFixturesFirst<'a when 'a: equality> =
     |> testPropertyWithConfig config $"Correctness on %A{typeof<'a>}"
 
 let tests =
-    q.Error.Add(fun e -> failwithf $"%A{e}")
+    //q.Error.Add(fun e -> failwithf $"%A{e}")
 
     let last =
         [ testFixturesLast<int>
@@ -95,7 +95,7 @@ let createInitTest clScatter hostScatter name valuesMap valuesMapQ =
     |> testPropertyWithConfig config name
 
 let initTests =
-    q.Error.Add(fun e -> failwithf $"%A{e}")
+    //sq.Error.Add(fun e -> failwithf $"%A{e}")
 
     let inc = ((+) 1)
 

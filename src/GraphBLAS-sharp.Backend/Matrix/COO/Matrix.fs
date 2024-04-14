@@ -22,7 +22,7 @@ module Matrix =
 
         let copyData = ClArray.copy clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (matrix: COO<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (matrix: COO<'a>) ->
             { Context = clContext
               RowCount = matrix.RowCount
               ColumnCount = matrix.ColumnCount
@@ -83,7 +83,7 @@ module Matrix =
 
         let copyData = ClArray.copy clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (matrix: ClMatrix.COO<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (matrix: ClMatrix.COO<'a>) ->
 
             let resultRows =
                 copy processor allocationMode matrix.Rows
@@ -124,7 +124,7 @@ module Matrix =
         let scan =
             Common.PrefixSum.runBackwardsIncludeInPlace <@ min @> clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (rowIndices: ClArray<int>) rowCount ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (rowIndices: ClArray<int>) rowCount ->
 
             let nnz = rowIndices.Length
 
@@ -154,7 +154,7 @@ module Matrix =
 
         let copyData = ClArray.copy clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (matrix: ClMatrix.COO<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (matrix: ClMatrix.COO<'a>) ->
             let rowPointers =
                 prepare processor allocationMode matrix.Rows matrix.RowCount
 
@@ -180,7 +180,7 @@ module Matrix =
     let toCSRInPlace (clContext: ClContext) workGroupSize =
         let prepare = compressRows clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (matrix: ClMatrix.COO<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (matrix: ClMatrix.COO<'a>) ->
             let rowPointers =
                 prepare processor allocationMode matrix.Rows matrix.RowCount
 
@@ -204,7 +204,7 @@ module Matrix =
         let sort =
             Common.Sort.Bitonic.sortKeyValuesInplace clContext workGroupSize
 
-        fun (queue: MailboxProcessor<_>) (matrix: ClMatrix.COO<'a>) ->
+        fun (queue: DeviceCommandQueue<_>) (matrix: ClMatrix.COO<'a>) ->
             sort queue matrix.Columns matrix.Rows matrix.Values
 
             { Context = clContext
@@ -227,7 +227,7 @@ module Matrix =
 
         let copyData = ClArray.copy clContext workGroupSize
 
-        fun (queue: MailboxProcessor<_>) allocationMode (matrix: ClMatrix.COO<'a>) ->
+        fun (queue: DeviceCommandQueue<_>) allocationMode (matrix: ClMatrix.COO<'a>) ->
 
             { Context = clContext
               RowCount = matrix.RowCount
@@ -288,7 +288,7 @@ module Matrix =
 
         let blitData = ClArray.blit clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode startRow count (matrix: ClMatrix.COO<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode startRow count (matrix: ClMatrix.COO<'a>) ->
             if count <= 0 then
                 failwith "Count must be greater than zero"
 

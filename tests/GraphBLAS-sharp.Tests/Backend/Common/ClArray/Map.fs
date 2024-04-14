@@ -7,6 +7,7 @@ open GraphBLAS.FSharp.Tests.Context
 open GraphBLAS.FSharp.Backend.Common
 open GraphBLAS.FSharp.Backend.Quotes
 open GraphBLAS.FSharp.Objects.ClContextExtensions
+open GraphBLAS.FSharp.Objects.ArraysExtensions
 
 let context = defaultContext.Queue
 
@@ -30,10 +31,7 @@ let makeTest (testContext: TestContext) mapFun zero isEqual (array: 'a option []
 
         let (actualDevice: ClArray<_>) = mapFun q HostInterop clArray
 
-        let actualHost = Array.zeroCreate actualDevice.Length
-
-        q.PostAndReply(fun ch -> Msg.CreateToHostMsg(actualDevice, actualHost, ch))
-        |> ignore
+        let actualHost = actualDevice.ToHostAndFree q
 
         let expected = Array.map (mapOptionToValue zero) array
 

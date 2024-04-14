@@ -6,6 +6,7 @@ open Expecto.Logging.Message
 open Brahma.FSharp
 open GraphBLAS.FSharp
 open GraphBLAS.FSharp.Tests
+open GraphBLAS.FSharp.Objects.ArraysExtensions
 
 let logger = Log.create "RemoveDuplicates.Tests"
 
@@ -15,7 +16,7 @@ let testCases =
     let removeDuplicates_wg_2 = ClArray.removeDuplications context 2
     let removeDuplicates_wg_32 = ClArray.removeDuplications context 32
     let q = Context.defaultContext.Queue
-    q.Error.Add(fun e -> failwithf "%A" e)
+    //q.Error.Add(fun e -> failwithf "%A" e)
 
     [ testCase "Simple correctness test"
       <| fun () ->
@@ -26,8 +27,7 @@ let testCases =
           let actual =
               let clActual = removeDuplicates_wg_2 q clArray
 
-              let actual = Array.zeroCreate clActual.Length
-              q.PostAndReply(fun ch -> Msg.CreateToHostMsg(clActual, actual, ch))
+              clActual.ToHostAndFree q
 
           logger.debug (
               eventX "Actual is {actual}"
@@ -55,8 +55,7 @@ let testCases =
               let actual =
                   let clActual = removeDuplicates q clArray
 
-                  let actual = Array.zeroCreate clActual.Length
-                  q.PostAndReply(fun ch -> Msg.CreateToHostMsg(clActual, actual, ch))
+                  clActual.ToHostAndFree q
 
               logger.debug (
                   eventX "Actual is {actual}"

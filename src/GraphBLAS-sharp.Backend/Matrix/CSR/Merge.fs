@@ -161,7 +161,7 @@ module Merge =
 
         let kernel = clContext.Compile(merge)
 
-        fun (processor: MailboxProcessor<_>) (leftMatrix: ClMatrix.CSR<'a>) (rightMatrix: ClMatrix.CSR<'b>) ->
+        fun (processor: DeviceCommandQueue<_>) (leftMatrix: ClMatrix.CSR<'a>) (rightMatrix: ClMatrix.CSR<'b>) ->
 
             let firstLength = leftMatrix.Columns.Length
             let secondLength = rightMatrix.Columns.Length

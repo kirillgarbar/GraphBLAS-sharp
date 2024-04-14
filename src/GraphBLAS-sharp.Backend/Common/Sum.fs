@@ -14,7 +14,7 @@ module Reduce =
     /// </summary>
     let private runGeneral (clContext: ClContext) workGroupSize scan scanToCell =
 
-        fun (processor: MailboxProcessor<_>) (inputArray: ClArray<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) (inputArray: ClArray<'a>) ->
 
             let scan = scan processor
 
@@ -80,7 +80,7 @@ module Reduce =
 
         let kernel = clContext.Compile(scan)
 
-        fun (processor: MailboxProcessor<_>) (valuesArray: ClArray<'a>) valuesLength (resultArray: ClArray<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) (valuesArray: ClArray<'a>) valuesLength (resultArray: ClArray<'a>) ->
             let ndRange =
                 Range1D.CreateValid(valuesArray.Length, workGroupSize)
 
@@ -117,7 +117,7 @@ module Reduce =
 
         let kernel = clContext.Compile(scan)
 
-        fun (processor: MailboxProcessor<_>) (valuesArray: ClArray<'a>) valuesLength ->
+        fun (processor: DeviceCommandQueue<_>) (valuesArray: ClArray<'a>) valuesLength ->
 
             let ndRange =
                 Range1D.CreateValid(valuesArray.Length, workGroupSize)
@@ -149,7 +149,7 @@ module Reduce =
         let run =
             runGeneral clContext workGroupSize scan scanToCell
 
-        fun (processor: MailboxProcessor<_>) (array: ClArray<'a>) -> run processor array
+        fun (processor: DeviceCommandQueue<_>) (array: ClArray<'a>) -> run processor array
 
     let private scanReduce<'a when 'a: struct>
         (opAdd: Expr<'a -> 'a -> 'a>)
@@ -179,7 +179,7 @@ module Reduce =
 
         let kernel = clContext.Compile(scan)
 
-        fun (processor: MailboxProcessor<_>) (valuesArray: ClArray<'a>) valuesLength (resultArray: ClArray<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) (valuesArray: ClArray<'a>) valuesLength (resultArray: ClArray<'a>) ->
 
             let ndRange =
                 Range1D.CreateValid(valuesArray.Length, workGroupSize)
@@ -220,7 +220,7 @@ module Reduce =
 
         let kernel = clContext.Compile(scan)
 
-        fun (processor: MailboxProcessor<_>) (valuesArray: ClArray<'a>) valuesLength ->
+        fun (processor: DeviceCommandQueue<_>) (valuesArray: ClArray<'a>) valuesLength ->
 
             let ndRange =
                 Range1D.CreateValid(valuesArray.Length, workGroupSize)
@@ -252,7 +252,7 @@ module Reduce =
         let run =
             runGeneral clContext workGroupSize scan scanToCell
 
-        fun (processor: MailboxProcessor<_>) (array: ClArray<'a>) -> run processor array
+        fun (processor: DeviceCommandQueue<_>) (array: ClArray<'a>) -> run processor array
 
     /// <summary>
     /// Reduction of an array of values by an array of keys.
@@ -295,7 +295,7 @@ module Reduce =
 
             let kernel = clContext.Compile kernel
 
-            fun (processor: MailboxProcessor<_>) allocationMode (resultLength: int) (keys: ClArray<int>) (values: ClArray<'a>) ->
+            fun (processor: DeviceCommandQueue<_>) allocationMode (resultLength: int) (keys: ClArray<int>) (values: ClArray<'a>) ->
 
                 let reducedValues =
                     clContext.CreateClArrayWithSpecificAllocationMode(allocationMode, resultLength)
@@ -352,7 +352,7 @@ module Reduce =
 
             let kernel = clContext.Compile kernel
 
-            fun (processor: MailboxProcessor<_>) allocationMode (resultLength: int) (offsets: ClArray<int>) (keys: ClArray<int>) (values: ClArray<'a>) ->
+            fun (processor: DeviceCommandQueue<_>) allocationMode (resultLength: int) (offsets: ClArray<int>) (keys: ClArray<int>) (values: ClArray<'a>) ->
 
                 let reducedValues =
                     clContext.CreateClArrayWithSpecificAllocationMode(allocationMode, resultLength)
@@ -448,7 +448,7 @@ module Reduce =
 
             let kernel = clContext.Compile kernel
 
-            fun (processor: MailboxProcessor<_>) allocationMode (resultLength: int) (keys: ClArray<int>) (values: ClArray<'a>) ->
+            fun (processor: DeviceCommandQueue<_>) allocationMode (resultLength: int) (keys: ClArray<int>) (values: ClArray<'a>) ->
                 if keys.Length > workGroupSize then
                     failwith "The length of the value should not exceed the size of the workgroup"
 
@@ -529,9 +529,9 @@ module Reduce =
                     Scatter.lastOccurrence clContext workGroupSize
 
                 let prefixSum =
-                    PrefixSum.standardExcludeInPlace clContext workGroupSize
+                    ScanInternal.standardExcludeInPlace clContext workGroupSize
 
-                fun (processor: MailboxProcessor<_>) allocationMode (keys: ClArray<int>) (values: ClArray<'a option>) ->
+                fun (processor: DeviceCommandQueue<_>) allocationMode (keys: ClArray<int>) (values: ClArray<'a option>) ->
 
                     let offsets =
                         getUniqueBitmap processor DeviceOnly keys
@@ -661,9 +661,9 @@ module Reduce =
                     Scatter.lastOccurrence clContext workGroupSize
 
                 let prefixSum =
-                    PrefixSum.standardExcludeInPlace clContext workGroupSize
+                    ScanInternal.standardExcludeInPlace clContext workGroupSize
 
-                fun (processor: MailboxProcessor<_>) allocationMode (resultLength: int) (offsets: ClArray<int>) (keys: ClArray<int>) (values: ClArray<'a>) ->
+                fun (processor: DeviceCommandQueue<_>) allocationMode (resultLength: int) (offsets: ClArray<int>) (keys: ClArray<int>) (values: ClArray<'a>) ->
 
                     let reducedValues =
                         clContext.CreateClArrayWithSpecificAllocationMode(DeviceOnly, resultLength)
@@ -772,7 +772,7 @@ module Reduce =
 
             let kernel = clContext.Compile kernel
 
-            fun (processor: MailboxProcessor<_>) allocationMode (resultLength: int) (firstKeys: ClArray<int>) (secondKeys: ClArray<int>) (values: ClArray<'a>) ->
+            fun (processor: DeviceCommandQueue<_>) allocationMode (resultLength: int) (firstKeys: ClArray<int>) (secondKeys: ClArray<int>) (values: ClArray<'a>) ->
 
                 let reducedValues =
                     clContext.CreateClArrayWithSpecificAllocationMode(allocationMode, resultLength)
@@ -845,7 +845,7 @@ module Reduce =
 
             let kernel = clContext.Compile kernel
 
-            fun (processor: MailboxProcessor<_>) allocationMode (resultLength: int) (offsets: ClArray<int>) (firstKeys: ClArray<int>) (secondKeys: ClArray<int>) (values: ClArray<'a>) ->
+            fun (processor: DeviceCommandQueue<_>) allocationMode (resultLength: int) (offsets: ClArray<int>) (firstKeys: ClArray<int>) (secondKeys: ClArray<int>) (values: ClArray<'a>) ->
 
                 let reducedValues =
                     clContext.CreateClArrayWithSpecificAllocationMode(allocationMode, resultLength)
@@ -940,9 +940,9 @@ module Reduce =
                     Scatter.lastOccurrence clContext workGroupSize
 
                 let prefixSum =
-                    PrefixSum.standardExcludeInPlace clContext workGroupSize
+                    ScanInternal.standardExcludeInPlace clContext workGroupSize
 
-                fun (processor: MailboxProcessor<_>) allocationMode (resultLength: int) (offsets: ClArray<int>) (firstKeys: ClArray<int>) (secondKeys: ClArray<int>) (values: ClArray<'a>) ->
+                fun (processor: DeviceCommandQueue<_>) allocationMode (resultLength: int) (offsets: ClArray<int>) (firstKeys: ClArray<int>) (secondKeys: ClArray<int>) (values: ClArray<'a>) ->
 
                     let reducedValues =
                         clContext.CreateClArrayWithSpecificAllocationMode(allocationMode, resultLength)

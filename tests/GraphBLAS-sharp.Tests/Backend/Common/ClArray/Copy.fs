@@ -43,7 +43,7 @@ let creatTest<'a when 'a: equality> =
     |> testPropertyWithConfig config $"Correctness test on random %A{typeof<'a>} arrays"
 
 let testCases =
-    q.Error.Add(fun e -> failwithf "%A" e)
+    //q.Error.Add(fun e -> failwithf "%A" e)
 
     [ creatTest<int>
       creatTest<bool>

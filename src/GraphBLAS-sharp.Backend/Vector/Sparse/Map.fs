@@ -37,7 +37,7 @@ module internal Map =
         let kernel =
             clContext.Compile <| preparePositions opAdd
 
-        fun (processor: MailboxProcessor<_>) (size: int) (values: ClArray<'a>) (indices: ClArray<int>) ->
+        fun (processor: DeviceCommandQueue<_>) (size: int) (values: ClArray<'a>) (indices: ClArray<int>) ->
 
             let resultBitmap =
                 clContext.CreateClArrayWithSpecificAllocationMode<int>(DeviceOnly, size)
@@ -82,7 +82,7 @@ module internal Map =
         let setPositions =
             Common.setPositions<'b> clContext workGroupSize
 
-        fun (queue: MailboxProcessor<_>) allocationMode (vector: ClVector.Sparse<'a>) ->
+        fun (queue: DeviceCommandQueue<_>) allocationMode (vector: ClVector.Sparse<'a>) ->
 
             let bitmap, values, indices =
                 map queue vector.Size vector.Values vector.Indices
@@ -122,7 +122,7 @@ module internal Map =
             let kernel =
                 clContext.Compile <| preparePositions opAdd
 
-            fun (processor: MailboxProcessor<_>) (value: ClCell<'a option>) (vector: Sparse<'b>) ->
+            fun (processor: DeviceCommandQueue<_>) (value: ClCell<'a option>) (vector: Sparse<'b>) ->
 
                 let resultBitmap =
                     clContext.CreateClArrayWithSpecificAllocationMode<int>(DeviceOnly, vector.Size)
@@ -176,7 +176,7 @@ module internal Map =
             let init =
                 ClArray.init <@ id @> clContext workGroupSize
 
-            fun (queue: MailboxProcessor<_>) allocationMode (value: 'a option) size ->
+            fun (queue: DeviceCommandQueue<_>) allocationMode (value: 'a option) size ->
                 function
                 | Some vector ->
                     let valueClCell = clContext.CreateClCell value

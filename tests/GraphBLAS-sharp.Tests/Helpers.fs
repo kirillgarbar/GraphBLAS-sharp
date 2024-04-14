@@ -402,7 +402,7 @@ module HostPrimitives =
 module Context =
     type TestContext =
         { ClContext: ClContext
-          Queue: MailboxProcessor<Msg> }
+          Queue: DeviceCommandQueue<Msg> }
 
     let availableContexts (platformRegex: string) =
         let mutable e = ErrorCode.Unknown

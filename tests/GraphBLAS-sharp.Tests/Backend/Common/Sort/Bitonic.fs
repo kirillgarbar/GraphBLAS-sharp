@@ -100,7 +100,7 @@ module Bitonic =
         |> testPropertyWithConfig config $"Correctness on %A{typeof<'a>}"
 
     let tests =
-        q.Error.Add(fun e -> failwithf "%A" e)
+        //q.Error.Add(fun e -> failwithf "%A" e)
 
         [ testFixtures<int>
 

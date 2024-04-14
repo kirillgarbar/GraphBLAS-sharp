@@ -44,7 +44,7 @@ module internal Map2 =
         let kernel =
             clContext.Compile <| preparePositions opAdd
 
-        fun (processor: MailboxProcessor<_>) rowCount columnCount (leftValues: ClArray<'a>) (leftRows: ClArray<int>) (leftColumns: ClArray<int>) (rightValues: ClArray<'b>) (rightRows: ClArray<int>) (rightColumns: ClArray<int>) ->
+        fun (processor: DeviceCommandQueue<_>) rowCount columnCount (leftValues: ClArray<'a>) (leftRows: ClArray<int>) (leftColumns: ClArray<int>) (rightValues: ClArray<'b>) (rightRows: ClArray<int>) (rightColumns: ClArray<int>) ->
 
             let (resultLength: int) = columnCount * rowCount
 
@@ -105,7 +105,7 @@ module internal Map2 =
         let setPositions =
             Common.setPositions<'c> clContext workGroupSize
 
-        fun (queue: MailboxProcessor<_>) allocationMode (matrixLeft: ClMatrix.COO<'a>) (matrixRight: ClMatrix.COO<'b>) ->
+        fun (queue: DeviceCommandQueue<_>) allocationMode (matrixLeft: ClMatrix.COO<'a>) (matrixRight: ClMatrix.COO<'b>) ->
 
             let bitmap, values, rows, columns =
                 map2
@@ -176,7 +176,7 @@ module internal Map2 =
 
             let kernel = clContext.Compile(preparePositions)
 
-            fun (processor: MailboxProcessor<_>) (allRows: ClArray<int>) (allColumns: ClArray<int>) (leftValues: ClArray<'a>) (rightValues: ClArray<'b>) (isLeft: ClArray<int>) ->
+            fun (processor: DeviceCommandQueue<_>) (allRows: ClArray<int>) (allColumns: ClArray<int>) (leftValues: ClArray<'a>) (rightValues: ClArray<'b>) (isLeft: ClArray<int>) ->
                 let length = leftValues.Length
 
                 let ndRange =
@@ -227,7 +227,7 @@ module internal Map2 =
             let setPositions =
                 Common.setPositions<'c> clContext workGroupSize
 
-            fun (queue: MailboxProcessor<_>) allocationMode (matrixLeft: ClMatrix.COO<'a>) (matrixRight: ClMatrix.COO<'b>) ->
+            fun (queue: DeviceCommandQueue<_>) allocationMode (matrixLeft: ClMatrix.COO<'a>) (matrixRight: ClMatrix.COO<'b>) ->
 
                 let allRows, allColumns, leftMergedValues, rightMergedValues, isLeft =
                     merge queue matrixLeft matrixRight

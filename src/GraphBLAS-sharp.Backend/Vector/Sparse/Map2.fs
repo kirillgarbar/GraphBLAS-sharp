@@ -37,7 +37,7 @@ module internal Map2 =
         let kernel =
             clContext.Compile <| preparePositions opAdd
 
-        fun (processor: MailboxProcessor<_>) (vectorLenght: int) (leftValues: ClArray<'a>) (leftIndices: ClArray<int>) (rightValues: ClArray<'b>) (rightIndices: ClArray<int>) ->
+        fun (processor: DeviceCommandQueue<_>) (vectorLenght: int) (leftValues: ClArray<'a>) (leftIndices: ClArray<int>) (rightValues: ClArray<'b>) (rightIndices: ClArray<int>) ->
 
             let resultBitmap =
                 clContext.CreateClArrayWithSpecificAllocationMode<int>(DeviceOnly, vectorLenght)
@@ -82,7 +82,7 @@ module internal Map2 =
         let setPositions =
             Common.setPositionsOption clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (leftVector: ClVector.Sparse<'a>) (rightVector: ClVector.Sparse<'b>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (leftVector: ClVector.Sparse<'a>) (rightVector: ClVector.Sparse<'b>) ->
 
             let bitmap, allValues, allIndices =
                 prepare
@@ -134,7 +134,7 @@ module internal Map2 =
         let kernel =
             clContext.Compile <| preparePositions opAdd
 
-        fun (processor: MailboxProcessor<_>) (vectorLenght: int) (leftValues: ClArray<'a>) (leftIndices: ClArray<int>) (rightValues: ClArray<'b option>) ->
+        fun (processor: DeviceCommandQueue<_>) (vectorLenght: int) (leftValues: ClArray<'a>) (leftIndices: ClArray<int>) (rightValues: ClArray<'b option>) ->
 
             let resultBitmap =
                 clContext.CreateClArrayWithSpecificAllocationMode<int>(DeviceOnly, vectorLenght)
@@ -181,7 +181,7 @@ module internal Map2 =
         let setPositions =
             Common.setPositionsOption clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (leftVector: ClVector.Sparse<'a>) (rightVector: ClArray<'b option>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (leftVector: ClVector.Sparse<'a>) (rightVector: ClArray<'b option>) ->
 
             let bitmap, allValues, allIndices =
                 prepare processor leftVector.NNZ leftVector.Values leftVector.Indices rightVector
@@ -232,7 +232,7 @@ module internal Map2 =
 
         let kernel = clContext.Compile <| assign op
 
-        fun (processor: MailboxProcessor<_>) (vectorLenght: int) (leftValues: ClArray<'a>) (leftIndices: ClArray<int>) (rightValues: ClArray<'b>) (rightIndices: ClArray<int>) (value: ClCell<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) (vectorLenght: int) (leftValues: ClArray<'a>) (leftIndices: ClArray<int>) (rightValues: ClArray<'b>) (rightIndices: ClArray<int>) (value: ClCell<'a>) ->
 
             let resultBitmap =
                 clContext.CreateClArrayWithSpecificAllocationMode<int>(DeviceOnly, vectorLenght)
@@ -281,7 +281,7 @@ module internal Map2 =
         let setPositions =
             Common.setPositions clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (leftVector: ClVector.Sparse<'a>) (rightVector: ClVector.Sparse<'b>) (value: 'a) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (leftVector: ClVector.Sparse<'a>) (rightVector: ClVector.Sparse<'b>) (value: 'a) ->
 
             let valueCell = clContext.CreateClCell(value)
 
@@ -337,7 +337,7 @@ module internal Map2 =
 
             let kernel = clContext.Compile <| preparePositions op
 
-            fun (processor: MailboxProcessor<_>) (allIndices: ClArray<int>) (leftValues: ClArray<'a>) (rightValues: ClArray<'b>) (isLeft: ClArray<int>) ->
+            fun (processor: DeviceCommandQueue<_>) (allIndices: ClArray<int>) (leftValues: ClArray<'a>) (rightValues: ClArray<'b>) (isLeft: ClArray<int>) ->
 
                 let length = allIndices.Length
 
@@ -383,7 +383,7 @@ module internal Map2 =
             let setPositions =
                 Common.setPositionsOption clContext workGroupSize
 
-            fun (processor: MailboxProcessor<_>) allocationMode (leftVector: ClVector.Sparse<'a>) (rightVector: ClVector.Sparse<'b>) ->
+            fun (processor: DeviceCommandQueue<_>) allocationMode (leftVector: ClVector.Sparse<'a>) (rightVector: ClVector.Sparse<'b>) ->
 
                 let allIndices, leftValues, rightValues, isLeft = merge processor leftVector rightVector
 

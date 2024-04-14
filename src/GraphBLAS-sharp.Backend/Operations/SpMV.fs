@@ -97,7 +97,7 @@ module internal SpMV =
         let multiplyValues = clContext.Compile multiplyValues
         let reduceValuesByRows = clContext.Compile reduceValuesByRows
 
-        fun (queue: MailboxProcessor<_>) (matrix: ClMatrix.CSR<'a>) (vector: ClArray<'b option>) (result: ClArray<'c option>) ->
+        fun (queue: DeviceCommandQueue<_>) (matrix: ClMatrix.CSR<'a>) (vector: ClArray<'b option>) (result: ClArray<'c option>) ->
 
             let matrixLength = matrix.Values.Length
 
@@ -151,7 +151,7 @@ module internal SpMV =
         =
         let runTo = runTo add mul clContext workGroupSize
 
-        fun (queue: MailboxProcessor<_>) allocationMode (matrix: ClMatrix.CSR<'a>) (vector: ClArray<'b option>) ->
+        fun (queue: DeviceCommandQueue<_>) allocationMode (matrix: ClMatrix.CSR<'a>) (vector: ClArray<'b option>) ->
 
             let result =
                 clContext.CreateClArrayWithSpecificAllocationMode<'c option>(allocationMode, matrix.RowCount)

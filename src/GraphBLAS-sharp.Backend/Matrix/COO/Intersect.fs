@@ -30,7 +30,7 @@ module internal Intersect =
 
         let kernel = clContext.Compile <| findIntersection
 
-        fun (processor: MailboxProcessor<_>) allocationMode (leftMatrix: ClMatrix.COO<'a>) (rightMatrix: ClMatrix.COO<'b>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (leftMatrix: ClMatrix.COO<'a>) (rightMatrix: ClMatrix.COO<'b>) ->
 
             let bitmapSize = leftMatrix.NNZ
 

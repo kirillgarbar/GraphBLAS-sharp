@@ -26,7 +26,7 @@ module Scatter =
 
         let program = clContext.Compile(run)
 
-        fun (processor: MailboxProcessor<_>) (positions: ClArray<int>) (values: ClArray<'a>) (result: ClArray<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) (positions: ClArray<int>) (values: ClArray<'a>) (result: ClArray<'a>) ->
 
             if positions.Length <> values.Length then
                 failwith "Lengths must be the same"
@@ -114,7 +114,7 @@ module Scatter =
 
         let program = clContext.Compile(run)
 
-        fun (processor: MailboxProcessor<_>) (positions: ClArray<int>) (result: ClArray<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) (positions: ClArray<int>) (result: ClArray<'a>) ->
 
             let positionsLength = positions.Length
 

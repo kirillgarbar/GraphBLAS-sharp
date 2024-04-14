@@ -76,7 +76,7 @@ module internal Radix =
 
         let kernel = clContext.Compile kernel
 
-        fun (processor: MailboxProcessor<_>) (indices: ClArray<int>) (clWorkGroupCount: ClCell<int>) (shift: ClCell<int>) ->
+        fun (processor: DeviceCommandQueue<_>) (indices: ClArray<int>) (clWorkGroupCount: ClCell<int>) (shift: ClCell<int>) ->
             let ndRange =
                 Range1D.CreateValid(indices.Length, workGroupSize)
 
@@ -133,7 +133,7 @@ module internal Radix =
 
         let kernel = clContext.Compile kernel
 
-        fun (processor: MailboxProcessor<_>) (keys: ClArray<int>) (shift: ClCell<int>) (workGroupCount: ClCell<int>) (globalOffset: ClArray<int>) (localOffsets: ClArray<int>) (result: ClArray<int>) ->
+        fun (processor: DeviceCommandQueue<_>) (keys: ClArray<int>) (shift: ClCell<int>) (workGroupCount: ClCell<int>) (globalOffset: ClArray<int>) (localOffsets: ClArray<int>) (result: ClArray<int>) ->
 
             let ndRange =
                 Range1D.CreateValid(keys.Length, workGroupSize)
@@ -156,11 +156,11 @@ module internal Radix =
         let count = count clContext workGroupSize mask
 
         let prefixSum =
-            PrefixSum.standardExcludeInPlace clContext workGroupSize
+            ScanInternal.standardExcludeInPlace clContext workGroupSize
 
         let scatter = scatter clContext workGroupSize mask
 
-        fun (processor: MailboxProcessor<_>) (keys: ClArray<int>) ->
+        fun (processor: DeviceCommandQueue<_>) (keys: ClArray<int>) ->
             if keys.Length <= 1 then
                 copy processor DeviceOnly keys // TODO(allocation mode)
             else
@@ -224,7 +224,7 @@ module internal Radix =
 
         let kernel = clContext.Compile kernel
 
-        fun (processor: MailboxProcessor<_>) (keys: ClArray<int>) (values: ClArray<'a>) (shift: ClCell<int>) (workGroupCount: ClCell<int>) (globalOffset: ClArray<int>) (localOffsets: ClArray<int>) (resultKeys: ClArray<int>) (resultValues: ClArray<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) (keys: ClArray<int>) (values: ClArray<'a>) (shift: ClCell<int>) (workGroupCount: ClCell<int>) (globalOffset: ClArray<int>) (localOffsets: ClArray<int>) (resultKeys: ClArray<int>) (resultValues: ClArray<'a>) ->
 
             let ndRange =
                 Range1D.CreateValid(keys.Length, workGroupSize)
@@ -264,7 +264,7 @@ module internal Radix =
         let scatterByKey =
             scatterByKey clContext workGroupSize mask
 
-        fun (processor: MailboxProcessor<_>) allocationMode (keys: ClArray<int>) (values: ClArray<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (keys: ClArray<int>) (values: ClArray<'a>) ->
             if values.Length <> keys.Length then
                 failwith "Mismatch of key lengths and value. Lengths must be the same"
 
@@ -332,7 +332,7 @@ module internal Radix =
         let runByKeys =
             runByKeys clContext workGroupSize defaultBitCount
 
-        fun (processor: MailboxProcessor<_>) allocationMode (keys: ClArray<int>) (values: ClArray<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (keys: ClArray<int>) (values: ClArray<'a>) ->
             let keys, values =
                 runByKeys processor allocationMode keys values
 

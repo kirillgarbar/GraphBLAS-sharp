@@ -13,7 +13,7 @@ module Matrix =
 
         let concatValues = ClArray.concat clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (matrix: LIL<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (matrix: LIL<'a>) ->
 
             let rowsPointers =
                 matrix.Rows

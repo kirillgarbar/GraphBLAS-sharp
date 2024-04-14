@@ -33,7 +33,7 @@ module SpMSpV =
 
         let collectRows = clContext.Compile collectRows
 
-        fun (queue: MailboxProcessor<_>) size (vectorIndices: ClArray<int>) (rowOffsets: ClArray<int>) ->
+        fun (queue: DeviceCommandQueue<_>) size (vectorIndices: ClArray<int>) (rowOffsets: ClArray<int>) ->
 
             let ndRange =
                 Range1D.CreateValid(size * 2 + 1, workGroupSize)
@@ -65,11 +65,11 @@ module SpMSpV =
                     inputArray.[i] <- 0 @>
 
         let sum =
-            PrefixSum.standardExcludeInPlace clContext workGroupSize
+            ScanInternal.standardExcludeInPlace clContext workGroupSize
 
         let prepareOffsets = clContext.Compile prepareOffsets
 
-        fun (queue: MailboxProcessor<_>) size (input: ClArray<int>) ->
+        fun (queue: DeviceCommandQueue<_>) size (input: ClArray<int>) ->
 
             let ndRange = Range1D.CreateValid(size, workGroupSize)
 
@@ -115,7 +115,7 @@ module SpMSpV =
 
         let gather = clContext.Compile gather
 
-        fun (queue: MailboxProcessor<_>) (matrix: ClMatrix.CSR<'a>) (vector: ClVector.Sparse<'b>) ->
+        fun (queue: DeviceCommandQueue<_>) (matrix: ClMatrix.CSR<'a>) (vector: ClVector.Sparse<'b>) ->
 
             //Collect R[v] and R[v + 1] for each v in vector
             let collectedRows =
@@ -185,7 +185,7 @@ module SpMSpV =
 
         let multiply = clContext.Compile multiply
 
-        fun (queue: MailboxProcessor<_>) (columnIndices: ClArray<int>) (matrixValues: ClArray<'a>) (vector: Sparse<'b>) ->
+        fun (queue: DeviceCommandQueue<_>) (columnIndices: ClArray<int>) (matrixValues: ClArray<'a>) (vector: Sparse<'b>) ->
 
             let resultLength = columnIndices.Length
 
@@ -235,7 +235,7 @@ module SpMSpV =
         let segReduce =
             Reduce.ByKey.Option.segmentSequential add clContext workGroupSize
 
-        fun (queue: MailboxProcessor<_>) (matrix: ClMatrix.CSR<'a>) (vector: ClVector.Sparse<'b>) ->
+        fun (queue: DeviceCommandQueue<_>) (matrix: ClMatrix.CSR<'a>) (vector: ClVector.Sparse<'b>) ->
             gather queue matrix vector
             |> Option.map
                 (fun (gatherRows, gatherIndices, gatherValues) ->
@@ -276,7 +276,7 @@ module SpMSpV =
         let gather = gather clContext workGroupSize
 
         let sort =
-            Sort.Radix.standardRunKeysOnly clContext workGroupSize
+            Sort.Bitonic.sortKeyValuesInplace clContext workGroupSize
 
         let removeDuplicates =
             GraphBLAS.FSharp.ClArray.removeDuplications clContext workGroupSize
@@ -284,20 +284,18 @@ module SpMSpV =
         let create =
             GraphBLAS.FSharp.ClArray.create clContext workGroupSize
 
-        fun (queue: MailboxProcessor<_>) (matrix: ClMatrix.CSR<'a>) (vector: ClVector.Sparse<'b>) ->
+        fun (queue: DeviceCommandQueue<_>) (matrix: ClMatrix.CSR<'a>) (vector: ClVector.Sparse<'b>) ->
 
             gather queue matrix vector
             |> Option.map
                 (fun (gatherRows, gatherIndices, gatherValues) ->
-                    gatherRows.Free queue
-                    gatherValues.Free queue
+                    sort queue gatherIndices gatherRows gatherValues
 
-                    let sortedIndices = sort queue gatherIndices
-
-                    let resultIndices = removeDuplicates queue sortedIndices
+                    let resultIndices = removeDuplicates queue gatherIndices
 
                     gatherIndices.Free queue
-                    sortedIndices.Free queue
+                    gatherRows.Free queue
+                    gatherValues.Free queue
 
                     { Context = clContext
                       Indices = resultIndices

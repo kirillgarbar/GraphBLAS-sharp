@@ -41,7 +41,7 @@ module internal Kronecker =
 
         let updateBitmap = clContext.Compile <| updateBitmap op
 
-        fun (processor: MailboxProcessor<_>) (operand: ClCell<'a>) (matrixRight: CSR<'b>) (bitmap: ClArray<int>) ->
+        fun (processor: DeviceCommandQueue<_>) (operand: ClCell<'a>) (matrixRight: CSR<'b>) (bitmap: ClArray<int>) ->
 
             let resultLength = matrixRight.NNZ + 1
 
@@ -76,7 +76,7 @@ module internal Kronecker =
 
         let opOnHost = op.Evaluate()
 
-        fun (queue: MailboxProcessor<_>) (matrixZero: COO<'c> option) (matrixLeft: CSR<'a>) (matrixRight: CSR<'b>) ->
+        fun (queue: DeviceCommandQueue<_>) (matrixZero: COO<'c> option) (matrixLeft: CSR<'a>) (matrixRight: CSR<'b>) ->
 
             let nnz =
                 match opOnHost None None with
@@ -142,7 +142,7 @@ module internal Kronecker =
 
         let kernel = clContext.Compile <| preparePositions op
 
-        fun (processor: MailboxProcessor<_>) (operand: ClCell<'a>) (matrix: CSR<'b>) (resultDenseMatrix: ClArray<'c>) (resultBitmap: ClArray<int>) ->
+        fun (processor: DeviceCommandQueue<_>) (operand: ClCell<'a>) (matrix: CSR<'b>) (resultDenseMatrix: ClArray<'c>) (resultBitmap: ClArray<int>) ->
 
             let resultLength = matrix.RowCount * matrix.ColumnCount
 
@@ -193,7 +193,7 @@ module internal Kronecker =
         let scan =
             Common.PrefixSum.standardIncludeInPlace clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) rowCount columnCount (rowOffset: int) (columnOffset: int) (startIndex: int) (resultMatrix: COO<'c>) (values: ClArray<'c>) (bitmap: ClArray<int>) ->
+        fun (processor: DeviceCommandQueue<_>) rowCount columnCount (rowOffset: int) (columnOffset: int) (startIndex: int) (resultMatrix: COO<'c>) (values: ClArray<'c>) (bitmap: ClArray<int>) ->
 
             let sum = scan processor bitmap
 
@@ -245,7 +245,7 @@ module internal Kronecker =
 
         let kernel = clContext.Compile <| copyToResult
 
-        fun (processor: MailboxProcessor<_>) startIndex (rowOffset: int) (columnOffset: int) (resultMatrix: COO<'c>) (sourceMatrix: COO<'c>) ->
+        fun (processor: DeviceCommandQueue<_>) startIndex (rowOffset: int) (columnOffset: int) (resultMatrix: COO<'c>) (sourceMatrix: COO<'c>) ->
 
             let ndRange =
                 Range1D.CreateValid(sourceMatrix.NNZ, workGroupSize)
@@ -367,7 +367,7 @@ module internal Kronecker =
 
         let insertZero = insertZero clContext workGroupSize
 
-        fun (queue: MailboxProcessor<_>) allocationMode (resultNNZ: int) (matrixZero: COO<'c> option) (matrixLeft: CSR<'a>) (matrixRight: CSR<'b>) ->
+        fun (queue: DeviceCommandQueue<_>) allocationMode (resultNNZ: int) (matrixZero: COO<'c> option) (matrixLeft: CSR<'a>) (matrixRight: CSR<'b>) ->
 
             let resultRows =
                 clContext.CreateClArrayWithSpecificAllocationMode<int>(allocationMode, resultNNZ)
@@ -438,7 +438,7 @@ module internal Kronecker =
         let bitonic =
             Common.Sort.Bitonic.sortKeyValuesInplace clContext workGroupSize
 
-        fun (queue: MailboxProcessor<_>) allocationMode (matrixLeft: CSR<'a>) (matrixRight: CSR<'b>) ->
+        fun (queue: DeviceCommandQueue<_>) allocationMode (matrixLeft: CSR<'a>) (matrixRight: CSR<'b>) ->
 
             let matrixZero =
                 mapWithValue queue allocationMode None matrixRight

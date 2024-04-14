@@ -13,6 +13,7 @@ open GraphBLAS.FSharp.Tests.Backend
 open GraphBLAS.FSharp.Objects
 open GraphBLAS.FSharp.Objects.MatrixExtensions
 open GraphBLAS.FSharp.Objects.ClContextExtensions
+open Brahma.FSharp
 
 let logger = Log.create "Map2.Tests"
 
@@ -51,7 +52,7 @@ let checkResult isEqual op zero (baseMtx1: 'a [,]) (baseMtx2: 'a [,]) (actual: M
 let correctnessGenericTest
     zero
     op
-    (addFun: MailboxProcessor<_> -> AllocationFlag -> ClMatrix<'a> -> ClMatrix<'a> -> ClMatrix<'c>)
+    (addFun: DeviceCommandQueue<_> -> AllocationFlag -> ClMatrix<'a> -> ClMatrix<'a> -> ClMatrix<'c>)
     toCOOFun
     (isEqual: 'a -> 'a -> bool)
     q
@@ -111,7 +112,7 @@ let createTestMap2Add case (zero: 'a) add isEqual addQ map2 =
 let testFixturesMap2Add case =
     [ let context = case.TestContext.ClContext
       let q = case.TestContext.Queue
-      q.Error.Add(fun e -> failwithf "%A" e)
+      //q.Error.Add(fun e -> failwithf "%A" e)
 
       createTestMap2Add case false (||) (=) ArithmeticOperations.boolSumOption Operations.Matrix.map2
       createTestMap2Add case 0 (+) (=) ArithmeticOperations.intSumOption Operations.Matrix.map2
@@ -128,7 +129,7 @@ let addTests =
 let testFixturesMap2AddAtLeastOne case =
     [ let context = case.TestContext.ClContext
       let q = case.TestContext.Queue
-      q.Error.Add(fun e -> failwithf "%A" e)
+      //q.Error.Add(fun e -> failwithf "%A" e)
 
       createTestMap2Add case false (||) (=) ArithmeticOperations.boolSumAtLeastOne Operations.Matrix.map2AtLeastOne
       createTestMap2Add case 0 (+) (=) ArithmeticOperations.intSumAtLeastOne Operations.Matrix.map2AtLeastOne
@@ -159,7 +160,7 @@ let addAtLeastOneTests =
 let testFixturesMap2MulAtLeastOne case =
     [ let context = case.TestContext.ClContext
       let q = case.TestContext.Queue
-      q.Error.Add(fun e -> failwithf "%A" e)
+      //q.Error.Add(fun e -> failwithf "%A" e)
 
       createTestMap2Add case false (&&) (=) ArithmeticOperations.boolMulAtLeastOne Operations.Matrix.map2AtLeastOne
       createTestMap2Add case 0 (*) (=) ArithmeticOperations.intMulAtLeastOne Operations.Matrix.map2AtLeastOne

@@ -209,7 +209,7 @@ module Bitonic =
         let localStep = clContext.Compile(localStep)
         let globalStep = clContext.Compile(globalStep)
 
-        fun (queue: MailboxProcessor<_>) (rows: ClArray<int>) (cols: ClArray<int>) (values: ClArray<'a>) ->
+        fun (queue: DeviceCommandQueue<_>) (rows: ClArray<int>) (cols: ClArray<int>) (values: ClArray<'a>) ->
 
             let size = values.Length
 

@@ -24,7 +24,7 @@ module Matrix =
         let vectorCopy =
             Sparse.Vector.copy clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (matrix: ClMatrix<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (matrix: ClMatrix<'a>) ->
             match matrix with
             | ClMatrix.COO m ->
                 ClMatrix.COO
@@ -75,7 +75,7 @@ module Matrix =
         let vectorCopyTo =
             Sparse.Vector.copyTo clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) (source: ClMatrix<'a>) (destination: ClMatrix<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) (source: ClMatrix<'a>) (destination: ClMatrix<'a>) ->
             if source.NNZ <> destination.NNZ
                || source.RowCount <> destination.RowCount
                || source.ColumnCount <> destination.ColumnCount then
@@ -119,7 +119,7 @@ module Matrix =
 
         let rowsToCSR = LIL.Matrix.toCSR clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (matrix: ClMatrix<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (matrix: ClMatrix<'a>) ->
             match matrix with
             | ClMatrix.COO m -> toCSR processor allocationMode m |> ClMatrix.CSR
             | ClMatrix.CSR _ -> copy processor allocationMode matrix
@@ -144,7 +144,7 @@ module Matrix =
         let transposeInPlace =
             CSR.Matrix.transposeInPlace clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (matrix: ClMatrix<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (matrix: ClMatrix<'a>) ->
             match matrix with
             | ClMatrix.COO m ->
                 toCSRInPlace processor allocationMode m
@@ -171,7 +171,7 @@ module Matrix =
 
         let rowsToCSR = LIL.Matrix.toCSR clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (matrix: ClMatrix<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (matrix: ClMatrix<'a>) ->
             match matrix with
             | ClMatrix.COO _ -> copy processor allocationMode matrix
             | ClMatrix.CSR m -> toCOO processor allocationMode m |> ClMatrix.COO
@@ -198,7 +198,7 @@ module Matrix =
         let transposeInPlace =
             COO.Matrix.transposeInPlace clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (matrix: ClMatrix<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (matrix: ClMatrix<'a>) ->
             match matrix with
             | ClMatrix.COO _ -> matrix
             | ClMatrix.CSR m ->
@@ -229,7 +229,7 @@ module Matrix =
 
         let rowsToCSR = LIL.Matrix.toCSR clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (matrix: ClMatrix<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (matrix: ClMatrix<'a>) ->
             match matrix with
             | ClMatrix.CSC _ -> copy processor allocationMode matrix
             | ClMatrix.CSR m ->
@@ -262,7 +262,7 @@ module Matrix =
         let transposeCOOInPlace =
             COO.Matrix.transposeInPlace clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (matrix: ClMatrix<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (matrix: ClMatrix<'a>) ->
             match matrix with
             | ClMatrix.CSC _ -> matrix
             | ClMatrix.CSR m ->
@@ -292,7 +292,7 @@ module Matrix =
 
         let CSRToLIL = CSR.Matrix.toLIL clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (matrix: ClMatrix<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (matrix: ClMatrix<'a>) ->
             match matrix with
             | ClMatrix.CSC m ->
                 m.ToCSR
@@ -325,7 +325,7 @@ module Matrix =
         let COOTransposeInPlace =
             COO.Matrix.transposeInPlace clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) matrix ->
+        fun (processor: DeviceCommandQueue<_>) matrix ->
             match matrix with
             | ClMatrix.COO m -> COOTransposeInPlace processor m |> ClMatrix.COO
             | ClMatrix.CSR m -> ClMatrix.CSC m.ToCSC
@@ -352,7 +352,7 @@ module Matrix =
 
         let copyData = ClArray.copy clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode matrix ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode matrix ->
             match matrix with
             | ClMatrix.COO m ->
                 COOTranspose processor allocationMode m

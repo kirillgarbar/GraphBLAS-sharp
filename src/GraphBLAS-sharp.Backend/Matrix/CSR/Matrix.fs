@@ -32,7 +32,7 @@ module Matrix =
 
         let program = clContext.Compile kernel
 
-        fun (processor: MailboxProcessor<_>) allocationMode (matrix: ClMatrix.CSR<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (matrix: ClMatrix.CSR<'a>) ->
 
             let rows =
                 clContext.CreateClArrayWithSpecificAllocationMode(allocationMode, matrix.Columns.Length)
@@ -77,7 +77,7 @@ module Matrix =
 
         let program = clContext.Compile kernel
 
-        fun (processor: MailboxProcessor<_>) (row: int) (column: int) (matrix: ClMatrix.CSR<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) (row: int) (column: int) (matrix: ClMatrix.CSR<'a>) ->
 
             if row < 0 || row >= matrix.RowCount then
                 failwith "Row out of range"
@@ -128,7 +128,7 @@ module Matrix =
 
         let blitData = ClArray.blit clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode startIndex count (matrix: ClMatrix.CSR<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode startIndex count (matrix: ClMatrix.CSR<'a>) ->
             if count <= 0 then
                 failwith "Count must be greater than zero"
 
@@ -202,7 +202,7 @@ module Matrix =
 
         let copyData = ClArray.copy clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (matrix: ClMatrix.CSR<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (matrix: ClMatrix.CSR<'a>) ->
             let rows = prepare processor allocationMode matrix
 
             let cols =
@@ -228,7 +228,7 @@ module Matrix =
         let prepare =
             expandRowPointers clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (matrix: ClMatrix.CSR<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (matrix: ClMatrix.CSR<'a>) ->
             let rows = prepare processor allocationMode matrix
 
             processor.Post(Msg.CreateFreeMsg(matrix.RowPointers))
@@ -298,7 +298,7 @@ module Matrix =
         let toCSRInPlace =
             COO.Matrix.toCSRInPlace clContext workGroupSize
 
-        fun (queue: MailboxProcessor<_>) allocationMode (matrix: ClMatrix.CSR<'a>) ->
+        fun (queue: DeviceCommandQueue<_>) allocationMode (matrix: ClMatrix.CSR<'a>) ->
             toCOOInPlace queue allocationMode matrix
             |> transposeInPlace queue
             |> toCSRInPlace queue allocationMode
@@ -318,7 +318,7 @@ module Matrix =
         let toCSRInPlace =
             COO.Matrix.toCSRInPlace clContext workGroupSize
 
-        fun (queue: MailboxProcessor<_>) allocationMode (matrix: ClMatrix.CSR<'a>) ->
+        fun (queue: DeviceCommandQueue<_>) allocationMode (matrix: ClMatrix.CSR<'a>) ->
             toCOO queue allocationMode matrix
             |> transposeInPlace queue
             |> toCSRInPlace queue allocationMode
@@ -334,7 +334,7 @@ module Matrix =
 
         let getChunkIndices = ClArray.sub clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (matrix: ClMatrix.CSR<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (matrix: ClMatrix.CSR<'a>) ->
 
             let getChunkValues =
                 getChunkValues processor allocationMode matrix.Values
@@ -372,7 +372,7 @@ module Matrix =
 
         let runLazy = byRowsLazy clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (matrix: ClMatrix.CSR<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (matrix: ClMatrix.CSR<'a>) ->
             runLazy processor allocationMode matrix
             |> Seq.map (fun lazyValue -> lazyValue.Value)
 
@@ -385,7 +385,7 @@ module Matrix =
 
         let byRows = byRows clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (matrix: ClMatrix.CSR<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (matrix: ClMatrix.CSR<'a>) ->
             let rows =
                 byRows processor allocationMode matrix
                 |> Seq.toList
@@ -407,7 +407,7 @@ module Matrix =
         let subtract =
             Backend.Common.Map.map <@ fun (fst, snd) -> snd - fst @> clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (matrix: ClMatrix.CSR<'b>) ->
+        fun (processor: DeviceCommandQueue<_>) allocationMode (matrix: ClMatrix.CSR<'b>) ->
             let pointerPairs =
                 pairwise processor DeviceOnly matrix.RowPointers
                 // since row pointers length in matrix always >= 2

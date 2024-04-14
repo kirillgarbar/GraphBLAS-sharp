@@ -34,7 +34,7 @@ module Gather =
 
         let program = clContext.Compile gather
 
-        fun (processor: MailboxProcessor<_>) (values: ClArray<'a>) (outputArray: ClArray<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) (values: ClArray<'a>) (outputArray: ClArray<'a>) ->
 
             let kernel = program.GetKernel()
 
@@ -76,7 +76,7 @@ module Gather =
 
         let program = clContext.Compile gather
 
-        fun (processor: MailboxProcessor<_>) (positions: ClArray<int>) (values: ClArray<'a>) (outputArray: ClArray<'a>) ->
+        fun (processor: DeviceCommandQueue<_>) (positions: ClArray<int>) (values: ClArray<'a>) (outputArray: ClArray<'a>) ->
 
             if positions.Length <> outputArray.Length then
                 failwith "Lengths must be the same"

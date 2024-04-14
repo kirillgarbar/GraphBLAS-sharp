@@ -10,7 +10,6 @@ open GraphBLAS.FSharp.Tests
 open GraphBLAS.FSharp.Objects
 open GraphBLAS.FSharp.Objects.ClVectorExtensions
 open GraphBLAS.FSharp.Objects.ClContextExtensions
-open GraphBLAS.FSharp.Objects.MailboxProcessorExtensions
 
 [<AbstractClass>]
 [<IterationCount(100)>]
@@ -41,7 +40,7 @@ type Benchmarks<'elem when 'elem : struct>(
 
     member this.Processor =
         let p = (fst this.OclContextInfo).Queue
-        p.Error.Add(fun e -> failwithf $"%A{e}")
+        //p.Error.Add(fun e -> failwithf $"%A{e}")
         p
 
     static member AvailableContexts = Utils.availableContexts
@@ -105,18 +104,18 @@ module WithoutTransfer =
         override this.IterationSetup() =
             this.CreateVectors()
             this.LoadVectorsToGPU()
-            this.Processor.PostAndReply Msg.MsgNotifyMe
+            this.Processor.Synchronize()
 
         [<Benchmark>]
         override this.Benchmark() =
             this.Map2()
-            this.Processor.PostAndReply Msg.MsgNotifyMe
+            this.Processor.Synchronize()
 
         [<IterationCleanup>]
         override this.IterationCleanup() =
             this.ClearResult()
             this.ClearInputVectors()
-            finish this.Processor
+            this.Processor.Synchronize()
 
         [<GlobalCleanup>]
         override this.GlobalCleanup() = ()
@@ -161,7 +160,7 @@ module WithTransfer =
         [<IterationSetup>]
         override this.IterationSetup() =
             this.CreateVectors()
-            finish this.Processor
+            this.Processor.Synchronize()
 
         [<Benchmark>]
         override this.Benchmark () =
@@ -170,7 +169,7 @@ module WithTransfer =
             match this.ResultVector with
             | Some v ->
                 v.ToHost this.Processor |> ignore
-                this.Processor.PostAndReply Msg.MsgNotifyMe
+                this.Processor.Synchronize()
             | None -> ()
 
 
@@ -178,7 +177,7 @@ module WithTransfer =
         override this.IterationCleanup () =
             this.ClearInputVectors()
             this.ClearResult()
-            finish this.Processor
+            this.Processor.Synchronize()
 
         [<GlobalCleanup>]
         override this.GlobalCleanup() = ()
