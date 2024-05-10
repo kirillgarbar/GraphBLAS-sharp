@@ -209,7 +209,6 @@ module internal PrefixSumInternal =
     let runBackwardsIncludeInPlace plus = runInPlace plus true scanInclusive
 
     /// <summary>
-    /// This method is deprecated due to bad perfomance.
     /// Exclude in-place prefix sum of integer array with addition operation and start value that is equal to 0.
     /// </summary>
     /// <example>
