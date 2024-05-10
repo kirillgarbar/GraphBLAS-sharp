@@ -6,7 +6,7 @@ open GraphBLAS.FSharp.Backend.Quotes
 open GraphBLAS.FSharp.Objects.ArraysExtensions
 open GraphBLAS.FSharp.Objects.ClCellExtensions
 
-module PrefixSum =
+module internal PrefixSumInternal =
     let private update (opAdd: Expr<'a -> 'a -> 'a>) (clContext: ClContext) workGroupSize =
 
         let update =
@@ -224,6 +224,8 @@ module PrefixSum =
     /// </example>
     /// <param name="clContext">ClContext.</param>
     /// <param name="workGroupSize">Should be a power of 2 and greater than 1.</param>
+    [<System.ObsoleteAttribute("This method is deprecated due to bad perfomance. Use method from Scan module instead.",
+                               false)>]
     let standardExcludeInPlace (clContext: ClContext) workGroupSize =
 
         let scan =
