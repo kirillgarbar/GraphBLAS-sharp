@@ -195,14 +195,14 @@ module internal BFS =
                         frontier.Dispose()
                         stop <- true
                     | Some newFrontier ->
-                        frontier.Dispose queue
+                        frontier.Dispose()
                         //Filtering visited vertices
                         match maskComplemented queue DeviceOnly newFrontier levels with
                         | None ->
                             stop <- true
-                            newFrontier.Dispose queue
+                            newFrontier.Dispose()
                         | Some newMaskedFrontier ->
-                            newFrontier.Dispose queue
+                            newFrontier.Dispose()
 
                             //Push/pull
                             let NNZ = getNNZ queue newMaskedFrontier
@@ -211,7 +211,7 @@ module internal BFS =
                                 frontier <- newMaskedFrontier
                             else
                                 frontier <- toDense queue DeviceOnly newMaskedFrontier
-                                newMaskedFrontier.Dispose queue
+                                newMaskedFrontier.Dispose()
                 | ClVector.Dense oldFrontier ->
                     //Getting new frontier
                     spMVInPlace queue matrix frontier frontier
@@ -227,8 +227,8 @@ module internal BFS =
                     if not stop then
                         if (push NNZ frontier.Size) then
                             frontier <- toSparse queue DeviceOnly frontier
-                            oldFrontier.Free queue
+                            oldFrontier.Free()
                     else
-                        frontier.Dispose queue
+                        frontier.Dispose()
 
             levels
