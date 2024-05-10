@@ -34,16 +34,16 @@ module Gather =
 
         let program = clContext.Compile gather
 
-        fun (processor: DeviceCommandQueue<_>) (values: ClArray<'a>) (outputArray: ClArray<'a>) ->
+        fun (processor: RawCommandQueue) (values: ClArray<'a>) (outputArray: ClArray<'a>) ->
 
             let kernel = program.GetKernel()
 
             let ndRange =
                 Range1D.CreateValid(outputArray.Length, workGroupSize)
 
-            processor.Post(Msg.MsgSetArguments(fun () -> kernel.KernelFunc ndRange values.Length values outputArray))
+            kernel.KernelFunc ndRange values.Length values outputArray
 
-            processor.Post(Msg.CreateRunMsg<_, _>(kernel))
+            processor.RunKernel kernel
 
     /// <summary>
     /// Fills the given output array using the given value and position arrays. Array of positions indicates
@@ -76,7 +76,7 @@ module Gather =
 
         let program = clContext.Compile gather
 
-        fun (processor: DeviceCommandQueue<_>) (positions: ClArray<int>) (values: ClArray<'a>) (outputArray: ClArray<'a>) ->
+        fun (processor: RawCommandQueue) (positions: ClArray<int>) (values: ClArray<'a>) (outputArray: ClArray<'a>) ->
 
             if positions.Length <> outputArray.Length then
                 failwith "Lengths must be the same"
@@ -86,9 +86,6 @@ module Gather =
             let ndRange =
                 Range1D.CreateValid(positions.Length, workGroupSize)
 
-            processor.Post(
-                Msg.MsgSetArguments
-                    (fun () -> kernel.KernelFunc ndRange positions.Length values.Length positions values outputArray)
-            )
+            kernel.KernelFunc ndRange positions.Length values.Length positions values outputArray
 
-            processor.Post(Msg.CreateRunMsg<_, _>(kernel))
+            processor.RunKernel kernel

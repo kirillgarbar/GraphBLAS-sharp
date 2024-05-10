@@ -15,7 +15,7 @@ open Expecto
 module Utils =
     type BenchmarkContext =
         { ClContext: Brahma.FSharp.ClContext
-          Queue: DeviceCommandQueue<Msg> }
+          Queue: RawCommandQueue }
 
     let getMatricesFilenames configFilename =
         let getFullPathToConfig filename =
@@ -103,9 +103,11 @@ module Utils =
                     let context =
                         Brahma.FSharp.ClContext(device, translator)
 
-                    let queue = context.QueueProvider.CreateQueue()
+                    let queue =
+                        RawCommandQueue(context.ClDevice.Device, context.Context, context.Translator)
 
                     { ClContext = context; Queue = queue })
+
         seq {
             for wgSize in workGroupSizes do
                 for context in contexts do
@@ -119,13 +121,14 @@ module Utils =
 
     let normalFloatGenerator =
         (Arb.Default.NormalFloat()
-        |> Arb.toGen
-        |> Gen.map float)
+         |> Arb.toGen
+         |> Gen.map float)
 
-    let fIsEqual x y = abs (x - y) < Accuracy.medium.absolute || x.Equals y
+    let fIsEqual x y =
+        abs (x - y) < Accuracy.medium.absolute
+        || x.Equals y
 
-    let nextInt (random: System.Random) =
-        random.Next()
+    let nextInt (random: System.Random) = random.Next()
 
 module VectorGenerator =
     let private pairOfVectorsOfEqualSize (valuesGenerator: Gen<'a>) createVector =
@@ -144,8 +147,10 @@ module VectorGenerator =
         |> pairOfVectorsOfEqualSize Arb.generate<int32>
 
     let floatPair format =
-        let fIsEqual x y = abs (x - y) < Accuracy.medium.absolute || x = y
+        let fIsEqual x y =
+            abs (x - y) < Accuracy.medium.absolute || x = y
 
-        let createVector array = Utils.createVectorFromArray format array (fIsEqual 0.0)
+        let createVector array =
+            Utils.createVectorFromArray format array (fIsEqual 0.0)
 
         pairOfVectorsOfEqualSize Utils.normalFloatGenerator createVector

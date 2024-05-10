@@ -19,7 +19,6 @@
     <Compile Include="Helpers.fs" />
     <Compile Include="Columns.fs" />
     <Compile Include="Configs.fs" />
-    <Compile Include="Common/SetArgs.fs" />
     <Compile Include="Matrix/SpGeMM/Masked.fs" />
     <Compile Include="Matrix/SpGeMM/Expand.fs" />
     <Compile Include="Matrix/Map2/Map2.fs" />

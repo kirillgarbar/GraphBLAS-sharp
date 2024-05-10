@@ -73,7 +73,7 @@ type Benchmarks(
     member this.ClearPreparedMatrix() =
         matrixPrepared.Dispose this.Processor
 
-    member this.ClearResult() = this.Result.Dispose this.Processor
+    member this.ClearResult() = this.Result.Dispose()
 
     member this.ReadMatrix() =
         let converter =

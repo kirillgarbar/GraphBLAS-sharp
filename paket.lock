@@ -19,26 +19,26 @@ NUGET
       System.Reflection.Emit.Lightweight (>= 4.7) - restriction: && (< net6.0) (>= netstandard2.0)
       System.Threading.Tasks.Extensions (>= 4.5.4) - restriction: && (< net6.0) (>= netstandard2.0)
     BenchmarkDotNet.Annotations (0.13.12) - restriction: >= netstandard2.0
-    Brahma.FSharp (3.0.0-alpha1.3)
-      Brahma.FSharp.OpenCL.Printer (>= 3.0.0-alpha1.3) - restriction: >= net7.0
-      Brahma.FSharp.OpenCL.Shared (>= 3.0.0-alpha1.3) - restriction: >= net7.0
-      Brahma.FSharp.OpenCL.Translator (>= 3.0.0-alpha1.3) - restriction: >= net7.0
+    Brahma.FSharp (3.0.0-alpha1.5)
+      Brahma.FSharp.OpenCL.Printer (>= 3.0.0-alpha1.5) - restriction: >= net7.0
+      Brahma.FSharp.OpenCL.Shared (>= 3.0.0-alpha1.5) - restriction: >= net7.0
+      Brahma.FSharp.OpenCL.Translator (>= 3.0.0-alpha1.5) - restriction: >= net7.0
       FSharp.Core (7.0) - restriction: >= net7.0
       FSharp.Quotations.Evaluator (>= 2.1) - restriction: >= net7.0
-      YC.OpenCL.NET (>= 3.0.0-alpha1.3) - restriction: >= net7.0
-    Brahma.FSharp.OpenCL.AST (3.0.0-alpha1.3) - restriction: >= net7.0
+      YC.OpenCL.NET (>= 3.0.0-alpha1.5) - restriction: >= net7.0
+    Brahma.FSharp.OpenCL.AST (3.0.0-alpha1.5) - restriction: >= net7.0
       FSharp.Core (7.0) - restriction: >= net7.0
-    Brahma.FSharp.OpenCL.Printer (3.0.0-alpha1.3) - restriction: >= net7.0
-      Brahma.FSharp.OpenCL.AST (>= 3.0.0-alpha1.3) - restriction: >= net7.0
-      Brahma.FSharp.OpenCL.Translator (>= 3.0.0-alpha1.3) - restriction: >= net7.0
+    Brahma.FSharp.OpenCL.Printer (3.0.0-alpha1.5) - restriction: >= net7.0
+      Brahma.FSharp.OpenCL.AST (>= 3.0.0-alpha1.5) - restriction: >= net7.0
+      Brahma.FSharp.OpenCL.Translator (>= 3.0.0-alpha1.5) - restriction: >= net7.0
       FSharp.Core (7.0) - restriction: >= net7.0
       FSharpx.Collections (>= 3.1) - restriction: >= net7.0
       FSharpx.Text.StructuredFormat (>= 3.1) - restriction: >= net7.0
-    Brahma.FSharp.OpenCL.Shared (3.0.0-alpha1.3) - restriction: >= net7.0
-      YC.OpenCL.NET (>= 3.0.0-alpha1.3) - restriction: >= net7.0
-    Brahma.FSharp.OpenCL.Translator (3.0.0-alpha1.3) - restriction: >= net7.0
-      Brahma.FSharp.OpenCL.AST (>= 3.0.0-alpha1.3) - restriction: >= net7.0
-      Brahma.FSharp.OpenCL.Shared (>= 3.0.0-alpha1.3) - restriction: >= net7.0
+    Brahma.FSharp.OpenCL.Shared (3.0.0-alpha1.5) - restriction: >= net7.0
+      YC.OpenCL.NET (>= 3.0.0-alpha1.5) - restriction: >= net7.0
+    Brahma.FSharp.OpenCL.Translator (3.0.0-alpha1.5) - restriction: >= net7.0
+      Brahma.FSharp.OpenCL.AST (>= 3.0.0-alpha1.5) - restriction: >= net7.0
+      Brahma.FSharp.OpenCL.Shared (>= 3.0.0-alpha1.5) - restriction: >= net7.0
       FSharp.Core (7.0) - restriction: >= net7.0
       FSharp.Quotations.Evaluator (>= 2.1) - restriction: >= net7.0
       FSharpx.Collections (>= 3.1) - restriction: >= net7.0
@@ -849,7 +849,7 @@ NUGET
       System.Xml.XmlDocument (>= 4.3) - restriction: && (< monoandroid) (< monotouch) (< net45) (>= netstandard1.3) (< win8) (< wpa81) (< xamarinios) (< xamarinmac) (< xamarintvos) (< xamarinwatchos)
     TypeShape (9.0)
       FSharp.Core (>= 4.3.2) - restriction: >= netstandard2.0
-    YC.OpenCL.NET (3.0.0-alpha1.3) - restriction: >= net7.0
+    YC.OpenCL.NET (3.0.0-alpha1.5) - restriction: >= net7.0
       ExtraConstraints.Fody (1.14) - restriction: >= net7.0
       Microsoft.Build.Framework (16.10) - restriction: >= net7.0
       System.CodeDom (>= 7.0) - restriction: >= net7.0
@@ -1071,7 +1071,7 @@ NUGET
       System.Security.AccessControl (>= 5.0) - restriction: || (&& (>= monoandroid) (< netstandard1.3)) (&& (< monoandroid) (>= netcoreapp2.0)) (>= monotouch) (&& (< net46) (< netcoreapp2.0) (>= netstandard2.0)) (>= net461) (>= netcoreapp2.1) (>= uap10.1) (>= xamarinios) (>= xamarinmac) (>= xamarintvos) (>= xamarinwatchos)
       System.Security.Principal.Windows (>= 5.0) - restriction: || (&& (>= monoandroid) (< netstandard1.3)) (&& (< monoandroid) (>= netcoreapp2.0)) (>= monotouch) (&& (< net46) (< netcoreapp2.0) (>= netstandard2.0)) (>= net461) (>= netcoreapp2.1) (>= uap10.1) (>= xamarinios) (>= xamarinmac) (>= xamarintvos) (>= xamarinwatchos)
     Mono.Posix.NETStandard (1.0) - restriction: >= netstandard2.0
-    MSBuild.StructuredLogger (2.2.206) - restriction: >= netstandard2.0
+    MSBuild.StructuredLogger (2.2.235) - restriction: >= netstandard2.0
       Microsoft.Build.Framework (>= 17.5) - restriction: >= netstandard2.0
       Microsoft.Build.Utilities.Core (>= 17.5) - restriction: >= netstandard2.0
     Newtonsoft.Json (13.0.3) - restriction: >= netstandard2.0
@@ -1316,7 +1316,7 @@ NUGET
       System.Security.AccessControl (>= 5.0) - restriction: || (&& (>= monoandroid) (< netstandard1.3)) (&& (< monoandroid) (>= netcoreapp2.0)) (>= monotouch) (&& (< net46) (< netcoreapp2.0) (>= netstandard2.0)) (>= net461) (>= netcoreapp2.1) (>= uap10.1) (>= xamarinios) (>= xamarinmac) (>= xamarintvos) (>= xamarinwatchos)
       System.Security.Principal.Windows (>= 5.0) - restriction: || (&& (>= monoandroid) (< netstandard1.3)) (&& (< monoandroid) (>= netcoreapp2.0)) (>= monotouch) (&& (< net46) (< netcoreapp2.0) (>= netstandard2.0)) (>= net461) (>= netcoreapp2.1) (>= uap10.1) (>= xamarinios) (>= xamarinmac) (>= xamarintvos) (>= xamarinwatchos)
     Mono.Posix.NETStandard (1.0) - restriction: >= netstandard2.0
-    MSBuild.StructuredLogger (2.2.206) - restriction: >= netstandard2.0
+    MSBuild.StructuredLogger (2.2.235) - restriction: >= netstandard2.0
       Microsoft.Build.Framework (>= 17.5) - restriction: >= netstandard2.0
       Microsoft.Build.Utilities.Core (>= 17.5) - restriction: >= netstandard2.0
     Newtonsoft.Json (13.0.3) - restriction: >= netstandard2.0

@@ -16,7 +16,7 @@ module PageRank =
     type PageRankMatrix =
         | PreparedMatrix of ClMatrix<float32>
 
-        member this.Dispose(processor: DeviceCommandQueue<Msg>) =
+        member this.Dispose(processor: RawCommandQueue) =
             match this with
             | PreparedMatrix matrix -> matrix.Dispose processor
 
@@ -38,7 +38,7 @@ module PageRank =
         let zeroCreate =
             GraphBLAS.FSharp.ClArray.zeroCreate clContext workGroupSize
 
-        fun (queue: DeviceCommandQueue<Msg>) (matrix: ClMatrix.CSR<float32>) ->
+        fun (queue: RawCommandQueue) (matrix: ClMatrix.CSR<float32>) ->
             let outDegree: ClArray<int option> =
                 zeroCreate queue DeviceOnly matrix.ColumnCount
 
@@ -96,7 +96,7 @@ module PageRank =
 
         let multiply = clContext.Compile multiply
 
-        fun (queue: DeviceCommandQueue<Msg>) (matrix: ClMatrix<float32>) ->
+        fun (queue: RawCommandQueue) (matrix: ClMatrix<float32>) ->
 
             match matrix with
             | ClMatrix.CSR matrix ->
@@ -111,28 +111,24 @@ module PageRank =
                 let ndRange =
                     Range1D.CreateValid(matrix.RowCount * workGroupSize, workGroupSize)
 
-                queue.Post(
-                    Msg.MsgSetArguments
-                        (fun () ->
-                            kernel.KernelFunc
-                                ndRange
-                                matrix.RowCount
-                                matrix.RowPointers
-                                matrix.Values
-                                outDegree
-                                resultValues)
-                )
+                kernel.KernelFunc
+                    ndRange
+                    matrix.RowCount
+                    matrix.RowPointers
+                    matrix.Values
+                    outDegree
+                    resultValues
 
-                queue.Post(Msg.CreateRunMsg<_, _> kernel)
+                queue.RunKernel(kernel)
 
-                outDegree.Free queue
+                outDegree.Free()
 
                 let newMatrix =
                     { Context = clContext
                       RowCount = matrix.RowCount
                       ColumnCount = matrix.ColumnCount
-                      RowPointers = copy queue DeviceOnly matrix.RowPointers
-                      Columns = copy queue DeviceOnly matrix.Columns
+                      RowPointers = copy queue DeviceOnly matrix.RowPointers matrix.RowPointers.Length
+                      Columns = copy queue DeviceOnly matrix.Columns matrix.Columns.Length
                       Values = resultValues }
 
                 transposeInPlace queue DeviceOnly newMatrix
@@ -162,7 +158,7 @@ module PageRank =
         let create =
             GraphBLAS.FSharp.Vector.create clContext workGroupSize
 
-        fun (queue: DeviceCommandQueue<Msg>) (PreparedMatrix matrix) accuracy ->
+        fun (queue: RawCommandQueue) (PreparedMatrix matrix) accuracy ->
             let vertexCount = matrix.RowCount
 
             //None is 0
@@ -206,8 +202,8 @@ module PageRank =
                 rank <- prevRank
                 prevRank <- temp
 
-            prevRank.Dispose queue
-            errors.Dispose queue
-            addition.Dispose queue
+            prevRank.Dispose()
+            errors.Dispose()
+            addition.Dispose()
 
             rank

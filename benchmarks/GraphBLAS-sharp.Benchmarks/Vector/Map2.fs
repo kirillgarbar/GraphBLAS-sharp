@@ -63,12 +63,12 @@ type Benchmarks<'elem when 'elem : struct>(
             | ex -> raise ex
 
     member this.ClearInputVectors()=
-        firstVector.Dispose this.Processor
-        secondVector.Dispose this.Processor
+        firstVector.Dispose()
+        secondVector.Dispose()
 
     member this.ClearResult() =
         match this.ResultVector with
-        | Some v -> v.Dispose this.Processor
+        | Some v -> v.Dispose()
         | None -> ()
 
     member this.CreateVectors()  =

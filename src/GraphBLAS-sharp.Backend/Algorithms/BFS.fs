@@ -34,7 +34,7 @@ module internal BFS =
         let containsNonZero =
             Vector.exists Predicates.isSome clContext workGroupSize
 
-        fun (queue: DeviceCommandQueue<Msg>) (matrix: ClMatrix<bool>) (source: int) ->
+        fun (queue: RawCommandQueue) (matrix: ClMatrix<bool>) (source: int) ->
             let vertexCount = matrix.RowCount
 
             let levels =
@@ -62,7 +62,7 @@ module internal BFS =
                     not
                     <| (containsNonZero queue front).ToHostAndFree queue
 
-            front.Dispose queue
+            front.Dispose()
 
             levels
 
@@ -87,7 +87,7 @@ module internal BFS =
         let fillSubVectorTo =
             Vector.assignByMaskInPlace Mask.assign clContext workGroupSize
 
-        fun (queue: DeviceCommandQueue<Msg>) (matrix: ClMatrix<bool>) (source: int) ->
+        fun (queue: RawCommandQueue) (matrix: ClMatrix<bool>) (source: int) ->
             let vertexCount = matrix.RowCount
 
             let levels =
@@ -108,18 +108,18 @@ module internal BFS =
                 //Getting new frontier
                 match spMSpV queue matrix front with
                 | None ->
-                    front.Dispose queue
+                    front.Dispose()
                     stop <- true
                 | Some newFrontier ->
-                    front.Dispose queue
+                    front.Dispose()
                     //Filtering visited vertices
                     match maskComplemented queue DeviceOnly newFrontier levels with
                     | None ->
                         stop <- true
-                        newFrontier.Dispose queue
+                        newFrontier.Dispose()
                     | Some f ->
                         front <- f
-                        newFrontier.Dispose queue
+                        newFrontier.Dispose()
 
             levels
 
@@ -159,17 +159,17 @@ module internal BFS =
             ClArray.count Predicates.isSome clContext workGroupSize
 
         //Push or pull functions
-        let getNNZ (queue: DeviceCommandQueue<Msg>) (v: ClVector<bool>) =
+        let getNNZ (queue: RawCommandQueue) (v: ClVector<bool>) =
             match v with
             | ClVector.Sparse v -> v.NNZ
             | ClVector.Dense v -> countNNZ queue v
 
-        let SPARSITY = 0.001f
+        let SPARSITY = 0.05f
 
         let push nnz size =
             (float32 nnz) / (float32 size) <= SPARSITY
 
-        fun (queue: DeviceCommandQueue<Msg>) (matrix: ClMatrix<bool>) (source: int) ->
+        fun (queue: RawCommandQueue) (matrix: ClMatrix<bool>) (source: int) ->
             let vertexCount = matrix.RowCount
 
             let levels =
@@ -192,7 +192,7 @@ module internal BFS =
                     //Getting new frontier
                     match spMSpV queue matrix frontier with
                     | None ->
-                        frontier.Dispose queue
+                        frontier.Dispose()
                         stop <- true
                     | Some newFrontier ->
                         frontier.Dispose queue

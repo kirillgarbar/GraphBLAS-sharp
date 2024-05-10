@@ -28,7 +28,7 @@ module internal MSBFS =
         let scatterValues =
             Scatter.lastOccurrence clContext workGroupSize
 
-        fun (queue: DeviceCommandQueue<_>) allocationMode (front: ClMatrix.COO<_>) (intersection: ClArray<int>) ->
+        fun (queue: RawCommandQueue) allocationMode (front: ClMatrix.COO<_>) (intersection: ClArray<int>) ->
 
             invert queue intersection
 
@@ -72,7 +72,7 @@ module internal MSBFS =
             let findIntersection =
                 Intersect.findKeysIntersection clContext workGroupSize
 
-            fun (queue: DeviceCommandQueue<_>) allocationMode (level: int) (front: ClMatrix.COO<_>) (levels: ClMatrix.COO<_>) ->
+            fun (queue: RawCommandQueue) allocationMode (level: int) (front: ClMatrix.COO<_>) (levels: ClMatrix.COO<_>) ->
 
                 // Find intersection of levels and front indices.
                 let intersection =
@@ -82,7 +82,7 @@ module internal MSBFS =
                 let newFront =
                     updateFront queue allocationMode front intersection
 
-                intersection.Free queue
+                intersection.Free()
 
                 match newFront with
                 | Some f ->
@@ -91,7 +91,7 @@ module internal MSBFS =
                     // Set current level value to all remaining front positions
                     setLevel queue levelClCell 0 f.Values.Length f.Values
 
-                    levelClCell.Free queue
+                    levelClCell.Free()
 
                     // Update levels
                     let newLevels = mergeDisjoint queue levels f
@@ -114,7 +114,7 @@ module internal MSBFS =
             let updateFrontAndLevels =
                 updateFrontAndLevels clContext workGroupSize
 
-            fun (queue: DeviceCommandQueue<Msg>) (matrix: ClMatrix<'a>) (source: int list) ->
+            fun (queue: RawCommandQueue) (matrix: ClMatrix<'a>) (source: int list) ->
                 let vertexCount = matrix.RowCount
                 let sourceVertexCount = source.Length
 
@@ -173,7 +173,7 @@ module internal MSBFS =
 
             let copyIndices = ClArray.copyTo clContext workGroupSize
 
-            fun (queue: DeviceCommandQueue<Msg>) allocationMode (front: ClMatrix.COO<_>) (parents: ClMatrix.COO<_>) ->
+            fun (queue: RawCommandQueue) allocationMode (front: ClMatrix.COO<_>) (parents: ClMatrix.COO<_>) ->
 
                 // Find intersection of levels and front indices.
                 let intersection =
@@ -183,7 +183,7 @@ module internal MSBFS =
                 let newFront =
                     frontExclude queue allocationMode front intersection
 
-                intersection.Free queue
+                intersection.Free()
 
                 match newFront with
                 | Some f ->
@@ -208,7 +208,7 @@ module internal MSBFS =
             let updateFrontAndParents =
                 updateFrontAndParents clContext workGroupSize
 
-            fun (queue: DeviceCommandQueue<Msg>) (inputMatrix: ClMatrix<'a>) (source: int list) ->
+            fun (queue: RawCommandQueue) (inputMatrix: ClMatrix<'a>) (source: int list) ->
                 let vertexCount = inputMatrix.RowCount
                 let sourceVertexCount = source.Length
 

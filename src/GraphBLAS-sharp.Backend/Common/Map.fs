@@ -25,7 +25,7 @@ module Map =
 
         let kernel = clContext.Compile map
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode (inputArray: ClArray<'a>) ->
+        fun (processor: RawCommandQueue) allocationMode (inputArray: ClArray<'a>) ->
 
             let result =
                 clContext.CreateClArrayWithSpecificAllocationMode(allocationMode, inputArray.Length)
@@ -35,9 +35,9 @@ module Map =
 
             let kernel = kernel.GetKernel()
 
-            processor.Post(Msg.MsgSetArguments(fun () -> kernel.KernelFunc ndRange inputArray.Length inputArray result))
+            kernel.KernelFunc ndRange inputArray.Length inputArray result
 
-            processor.Post(Msg.CreateRunMsg<_, _>(kernel))
+            processor.RunKernel kernel
 
             result
 
@@ -60,16 +60,16 @@ module Map =
 
         let kernel = clContext.Compile map
 
-        fun (processor: DeviceCommandQueue<_>) (inputArray: ClArray<'a>) ->
+        fun (processor: RawCommandQueue) (inputArray: ClArray<'a>) ->
 
             let ndRange =
                 Range1D.CreateValid(inputArray.Length, workGroupSize)
 
             let kernel = kernel.GetKernel()
 
-            processor.Post(Msg.MsgSetArguments(fun () -> kernel.KernelFunc ndRange inputArray.Length inputArray))
+            kernel.KernelFunc ndRange inputArray.Length inputArray
 
-            processor.Post(Msg.CreateRunMsg<_, _>(kernel))
+            processor.RunKernel kernel
 
     /// <summary>
     /// Builds a new array whose elements are the results of applying the given function
@@ -91,7 +91,7 @@ module Map =
 
         let kernel = clContext.Compile map
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode (value: 'a) (inputArray: ClArray<'b>) ->
+        fun (processor: RawCommandQueue) allocationMode (value: 'a) (inputArray: ClArray<'b>) ->
 
             let result =
                 clContext.CreateClArrayWithSpecificAllocationMode(allocationMode, inputArray.Length)
@@ -103,13 +103,11 @@ module Map =
 
             let kernel = kernel.GetKernel()
 
-            processor.Post(
-                Msg.MsgSetArguments(fun () -> kernel.KernelFunc ndRange inputArray.Length valueClCell inputArray result)
-            )
+            kernel.KernelFunc ndRange inputArray.Length valueClCell inputArray result
 
-            processor.Post(Msg.CreateRunMsg<_, _>(kernel))
+            processor.RunKernel kernel
 
-            valueClCell.Free processor
+            valueClCell.Free()
 
             result
 
@@ -136,19 +134,16 @@ module Map =
 
         let kernel = clContext.Compile kernel
 
-        fun (processor: DeviceCommandQueue<_>) (leftArray: ClArray<'a>) (rightArray: ClArray<'b>) (resultArray: ClArray<'c>) ->
+        fun (processor: RawCommandQueue) (leftArray: ClArray<'a>) (rightArray: ClArray<'b>) (resultArray: ClArray<'c>) ->
 
             let ndRange =
                 Range1D.CreateValid(resultArray.Length, workGroupSize)
 
             let kernel = kernel.GetKernel()
 
-            processor.Post(
-                Msg.MsgSetArguments
-                    (fun () -> kernel.KernelFunc ndRange resultArray.Length leftArray rightArray resultArray)
-            )
+            kernel.KernelFunc ndRange resultArray.Length leftArray rightArray resultArray
 
-            processor.Post(Msg.CreateRunMsg<_, _>(kernel))
+            processor.RunKernel kernel
 
     /// <summary>
     /// Builds a new array whose elements are the results of applying the given function
@@ -164,7 +159,7 @@ module Map =
         let map2 =
             map2InPlace<'a, 'b, 'c> map clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode (leftArray: ClArray<'a>) (rightArray: ClArray<'b>) ->
+        fun (processor: RawCommandQueue) allocationMode (leftArray: ClArray<'a>) (rightArray: ClArray<'b>) ->
 
             let resultArray =
                 clContext.CreateClArrayWithSpecificAllocationMode(allocationMode, leftArray.Length)
