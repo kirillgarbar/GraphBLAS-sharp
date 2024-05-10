@@ -138,26 +138,26 @@ module internal MSBFS =
                     //Getting new frontier
                     match spGeMM queue DeviceOnly (ClMatrix.COO front) matrix with
                     | None ->
-                        front.Dispose queue
+                        front.Dispose()
                         stop <- true
 
                     | Some newFrontier ->
-                        front.Dispose queue
+                        front.Dispose()
 
                         //Filtering visited vertices
                         match updateFrontAndLevels queue DeviceOnly level newFrontier levels with
                         | l, Some f ->
                             front <- f
 
-                            levels.Dispose queue
+                            levels.Dispose()
 
                             levels <- l
 
-                            newFrontier.Dispose queue
+                            newFrontier.Dispose()
 
                         | _, None ->
                             stop <- true
-                            newFrontier.Dispose queue
+                            newFrontier.Dispose()
 
                 ClMatrix.COO levels
 
@@ -242,24 +242,24 @@ module internal MSBFS =
                     //Getting new frontier
                     match spGeMM queue DeviceOnly (ClMatrix.COO front) matrix with
                     | None ->
-                        front.Dispose queue
+                        front.Dispose()
                         stop <- true
 
                     | Some newFrontier ->
-                        front.Dispose queue
+                        front.Dispose()
 
                         //Filtering visited vertices
                         match updateFrontAndParents queue DeviceOnly newFrontier parents with
                         | p, Some f ->
                             front <- f
 
-                            parents.Dispose queue
+                            parents.Dispose()
                             parents <- p
 
-                            newFrontier.Dispose queue
+                            newFrontier.Dispose()
 
                         | _, None ->
                             stop <- true
-                            newFrontier.Dispose queue
+                            newFrontier.Dispose()
 
                 ClMatrix.COO parents

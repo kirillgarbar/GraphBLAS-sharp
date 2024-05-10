@@ -100,12 +100,12 @@ type Masked<'elem when 'elem : struct>(
         this.ResultMatrix <- this.FunToBenchmark this.Processor firstMatrix secondMatrix mask
 
     member this.ClearInputMatrices() =
-        firstMatrix.Dispose this.Processor
-        secondMatrix.Dispose this.Processor
-        mask.Dispose this.Processor
+        firstMatrix.Dispose()
+        secondMatrix.Dispose()
+        mask.Dispose()
 
     member this.ClearResult() =
-        this.ResultMatrix.Dispose this.Processor
+        this.ResultMatrix.Dispose()
 
     member this.ReadMask(maskReader) =
         maskHost <- Matrix.COO <| this.ReadMatrix maskReader

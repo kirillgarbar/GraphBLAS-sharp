@@ -19,12 +19,12 @@ module ClMatrix =
           Values: ClArray<'elem> }
 
         interface IDeviceMemObject with
-            member this.Dispose q =
-                q.Post(Msg.CreateFreeMsg<_>(this.Values))
-                q.Post(Msg.CreateFreeMsg<_>(this.Columns))
-                q.Post(Msg.CreateFreeMsg<_>(this.RowPointers))
+            member this.Dispose() =
+                this.Values.Dispose()
+                this.Columns.Dispose()
+                this.RowPointers.Dispose()
 
-        member this.Dispose q = (this :> IDeviceMemObject).Dispose q
+        member this.Dispose() = (this :> IDeviceMemObject).Dispose()
 
         member this.NNZ = this.Values.Length
 
@@ -45,13 +45,12 @@ module ClMatrix =
           Values: ClArray<'elem> }
 
         interface IDeviceMemObject with
-            member this.Dispose q =
-                q.Post(Msg.CreateFreeMsg<_>(this.Values))
-                q.Post(Msg.CreateFreeMsg<_>(this.Rows))
-                q.Post(Msg.CreateFreeMsg<_>(this.ColumnPointers))
-                q.Synchronize()
+            member this.Dispose() =
+                this.Values.Dispose()
+                this.Rows.Dispose()
+                this.ColumnPointers.Dispose()
 
-        member this.Dispose q = (this :> IDeviceMemObject).Dispose q
+        member this.Dispose() = (this :> IDeviceMemObject).Dispose()
 
         member this.NNZ = this.Values.Length
 
@@ -72,13 +71,12 @@ module ClMatrix =
           Values: ClArray<'elem> }
 
         interface IDeviceMemObject with
-            member this.Dispose q =
-                q.Post(Msg.CreateFreeMsg<_>(this.Values))
-                q.Post(Msg.CreateFreeMsg<_>(this.Columns))
-                q.Post(Msg.CreateFreeMsg<_>(this.Rows))
-                q.Synchronize()
+            member this.Dispose() =
+                this.Values.Dispose()
+                this.Columns.Dispose()
+                this.Rows.Dispose()
 
-        member this.Dispose q = (this :> IDeviceMemObject).Dispose q
+        member this.Dispose() = (this :> IDeviceMemObject).Dispose()
 
         member this.NNZ = this.Values.Length
 
@@ -89,10 +87,10 @@ module ClMatrix =
           Rows: ClVector.Sparse<'elem> option list }
 
         interface IDeviceMemObject with
-            member this.Dispose q =
+            member this.Dispose() =
                 this.Rows
                 |> Seq.choose id
-                |> Seq.iter (fun vector -> vector.Dispose q)
+                |> Seq.iter (fun vector -> vector.Dispose())
 
         member this.NNZ =
             this.Rows
@@ -110,13 +108,12 @@ module ClMatrix =
           Values: ClArray<'elem> }
 
         interface IDeviceMemObject with
-            member this.Dispose q =
-                q.Post(Msg.CreateFreeMsg<_>(this.RowIndices))
-                q.Post(Msg.CreateFreeMsg<_>(this.ColumnIndices))
-                q.Post(Msg.CreateFreeMsg<_>(this.Values))
-                q.Synchronize()
+            member this.Dispose() =
+                this.RowIndices.Dispose()
+                this.ColumnIndices.Dispose()
+                this.Values.Dispose()
 
-        member this.Dispose q = (this :> IDeviceMemObject).Dispose q
+        member this.Dispose() = (this :> IDeviceMemObject).Dispose()
 
         member this.NNZ = this.Values.Length
 
@@ -165,12 +162,12 @@ type ClMatrix<'a when 'a: struct> =
     /// <summary>
     /// Release device resources allocated for the matrix.
     /// </summary>
-    member this.Dispose q =
+    member this.Dispose() =
         match this with
-        | ClMatrix.CSR matrix -> (matrix :> IDeviceMemObject).Dispose q
-        | ClMatrix.COO matrix -> (matrix :> IDeviceMemObject).Dispose q
-        | ClMatrix.CSC matrix -> (matrix :> IDeviceMemObject).Dispose q
-        | ClMatrix.LIL matrix -> (matrix :> IDeviceMemObject).Dispose q
+        | ClMatrix.CSR matrix -> (matrix :> IDeviceMemObject).Dispose()
+        | ClMatrix.COO matrix -> (matrix :> IDeviceMemObject).Dispose()
+        | ClMatrix.CSC matrix -> (matrix :> IDeviceMemObject).Dispose()
+        | ClMatrix.LIL matrix -> (matrix :> IDeviceMemObject).Dispose()
 
     /// <summary>
     /// Gets the number of non-zero elements in matrix.

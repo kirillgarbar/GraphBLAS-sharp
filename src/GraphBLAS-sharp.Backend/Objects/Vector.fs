@@ -15,11 +15,11 @@ module ClVector =
           Size: int }
 
         interface IDeviceMemObject with
-            member this.Dispose(q) =
-                q.Post(Msg.CreateFreeMsg<_>(this.Values))
-                q.Post(Msg.CreateFreeMsg<_>(this.Indices))
+            member this.Dispose() =
+                this.Values.Dispose()
+                this.Indices.Dispose()
 
-        member this.Dispose(q) = (this :> IDeviceMemObject).Dispose(q)
+        member this.Dispose() = (this :> IDeviceMemObject).Dispose()
 
         member this.NNZ = this.Values.Length
 
@@ -48,7 +48,7 @@ type ClVector<'a when 'a: struct> =
     /// <summary>
     /// Release device resources allocated for the vector.
     /// </summary>
-    member this.Dispose(q) =
+    member this.Dispose() =
         match this with
-        | Sparse vector -> vector.Dispose(q)
-        | Dense vector -> vector.FreeAndWait(q)
+        | Sparse vector -> vector.Dispose()
+        | Dense vector -> vector.Free()

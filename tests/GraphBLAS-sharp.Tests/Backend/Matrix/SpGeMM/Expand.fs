@@ -47,8 +47,8 @@ let makeTest isZero testFun (leftArray: 'a [,], rightArray: 'a [,]) =
         let actualLength, (clActual: ClArray<int>) =
             testFun processor clLeftMatrix.Columns clRightMatrix.RowPointers
 
-        clLeftMatrix.Dispose processor
-        clRightMatrix.Dispose processor
+        clLeftMatrix.Dispose()
+        clRightMatrix.Dispose()
 
         let actualPointers = clActual.ToHostAndFree processor
 
@@ -132,8 +132,8 @@ let makeExpandTest isEqual zero testFun (leftArray: 'a [,], rightArray: 'a [,]) 
                  clActualRows: ClArray<int>) =
                 testFun processor length clSegmentPointers clLeftMatrix clRightMatrix
 
-            clLeftMatrix.Dispose processor
-            clRightMatrix.Dispose processor
+            clLeftMatrix.Dispose()
+            clRightMatrix.Dispose()
             clSegmentPointers.Free()
 
             let actualLeftValues =
@@ -200,7 +200,7 @@ let makeGeneralTest zero isEqual opAdd opMul testFun (leftArray: 'a [,], rightAr
         | Some clMatrixActual ->
 
             let matrixActual = clMatrixActual.ToHost processor
-            clMatrixActual.Dispose processor
+            clMatrixActual.Dispose()
 
             Utils.compareCOOMatrix isEqual matrixActual expected
         | None ->

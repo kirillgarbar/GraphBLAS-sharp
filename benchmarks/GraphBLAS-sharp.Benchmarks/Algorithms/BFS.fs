@@ -69,7 +69,7 @@ type Benchmarks<'elem when 'elem : struct>(
         this.ResultLevels <- this.FunToBenchmark this.Processor matrix vertex
 
     member this.ClearInputMatrix() =
-        matrix.Dispose this.Processor
+        matrix.Dispose()
 
     member this.ClearResult() =
         match this.ResultLevels with

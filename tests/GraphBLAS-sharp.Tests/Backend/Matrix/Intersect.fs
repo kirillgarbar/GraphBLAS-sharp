@@ -55,8 +55,8 @@ let makeTest<'a when 'a: struct> isZero testFun (leftMatrix: 'a [,], rightMatrix
 
         let actual = actual.ToHostAndFree processor
 
-        m1.Dispose processor
-        m2.Dispose processor
+        m1.Dispose()
+        m2.Dispose()
 
         // Check result
         "Matrices should be equal"

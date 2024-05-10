@@ -32,7 +32,7 @@ module Matrix =
 
         let program = clContext.Compile kernel
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode (matrix: ClMatrix.CSR<'a>) ->
+        fun (processor: RawCommandQueue) allocationMode (matrix: ClMatrix.CSR<'a>) ->
 
             let rows =
                 clContext.CreateClArrayWithSpecificAllocationMode(allocationMode, matrix.Columns.Length)
@@ -42,18 +42,9 @@ module Matrix =
             let ndRange =
                 Range1D.CreateValid(matrix.Columns.Length, workGroupSize)
 
-            processor.Post(
-                Msg.MsgSetArguments
-                    (fun () ->
-                        kernel.KernelFunc
-                            ndRange
-                            matrix.Columns.Length
-                            matrix.RowPointers.Length
-                            matrix.RowPointers
-                            rows)
-            )
+            kernel.KernelFunc ndRange matrix.Columns.Length matrix.RowPointers.Length matrix.RowPointers rows
 
-            processor.Post(Msg.CreateRunMsg<_, _> kernel)
+            processor.RunKernel kernel
 
             rows
 
@@ -77,7 +68,7 @@ module Matrix =
 
         let program = clContext.Compile kernel
 
-        fun (processor: DeviceCommandQueue<_>) (row: int) (column: int) (matrix: ClMatrix.CSR<'a>) ->
+        fun (processor: RawCommandQueue) (row: int) (column: int) (matrix: ClMatrix.CSR<'a>) ->
 
             if row < 0 || row >= matrix.RowCount then
                 failwith "Row out of range"
@@ -91,13 +82,9 @@ module Matrix =
 
             let ndRange = Range1D.CreateValid(1, workGroupSize)
 
-            processor.Post(
-                Msg.MsgSetArguments
-                    (fun () ->
-                        kernel.KernelFunc ndRange row column matrix.RowPointers matrix.Columns matrix.Values result)
-            )
+            kernel.KernelFunc ndRange row column matrix.RowPointers matrix.Columns matrix.Values result
 
-            processor.Post(Msg.CreateRunMsg<_, _> kernel)
+            processor.RunKernel kernel
 
             result
 
@@ -128,7 +115,7 @@ module Matrix =
 
         let blitData = ClArray.blit clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode startIndex count (matrix: ClMatrix.CSR<'a>) ->
+        fun (processor: RawCommandQueue) allocationMode startIndex count (matrix: ClMatrix.CSR<'a>) ->
             if count <= 0 then
                 failwith "Count must be greater than zero"
 
@@ -153,19 +140,9 @@ module Matrix =
             let ndRange =
                 Range1D.CreateValid(matrix.Columns.Length, workGroupSize)
 
-            processor.Post(
-                Msg.MsgSetArguments
-                    (fun () ->
-                        kernel.KernelFunc
-                            ndRange
-                            resultLength
-                            startIndex
-                            matrix.RowPointers.Length
-                            matrix.RowPointers
-                            rows)
-            )
+            kernel.KernelFunc ndRange resultLength startIndex matrix.RowPointers.Length matrix.RowPointers rows
 
-            processor.Post(Msg.CreateRunMsg<_, _> kernel)
+            processor.RunKernel kernel
 
             let startPosition = rowPointers.[startIndex]
 
@@ -202,14 +179,14 @@ module Matrix =
 
         let copyData = ClArray.copy clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode (matrix: ClMatrix.CSR<'a>) ->
+        fun (processor: RawCommandQueue) allocationMode (matrix: ClMatrix.CSR<'a>) ->
             let rows = prepare processor allocationMode matrix
 
             let cols =
-                copy processor allocationMode matrix.Columns
+                copy processor allocationMode matrix.Columns matrix.Columns.Length
 
             let values =
-                copyData processor allocationMode matrix.Values
+                copyData processor allocationMode matrix.Values matrix.Values.Length
 
             { Context = clContext
               RowCount = matrix.RowCount
@@ -228,10 +205,10 @@ module Matrix =
         let prepare =
             expandRowPointers clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode (matrix: ClMatrix.CSR<'a>) ->
+        fun (processor: RawCommandQueue) allocationMode (matrix: ClMatrix.CSR<'a>) ->
             let rows = prepare processor allocationMode matrix
 
-            processor.Post(Msg.CreateFreeMsg(matrix.RowPointers))
+            matrix.RowPointers.Free()
 
             { Context = clContext
               RowCount = matrix.RowCount
@@ -298,7 +275,7 @@ module Matrix =
         let toCSRInPlace =
             COO.Matrix.toCSRInPlace clContext workGroupSize
 
-        fun (queue: DeviceCommandQueue<_>) allocationMode (matrix: ClMatrix.CSR<'a>) ->
+        fun (queue: RawCommandQueue) allocationMode (matrix: ClMatrix.CSR<'a>) ->
             toCOOInPlace queue allocationMode matrix
             |> transposeInPlace queue
             |> toCSRInPlace queue allocationMode
@@ -318,7 +295,7 @@ module Matrix =
         let toCSRInPlace =
             COO.Matrix.toCSRInPlace clContext workGroupSize
 
-        fun (queue: DeviceCommandQueue<_>) allocationMode (matrix: ClMatrix.CSR<'a>) ->
+        fun (queue: RawCommandQueue) allocationMode (matrix: ClMatrix.CSR<'a>) ->
             toCOO queue allocationMode matrix
             |> transposeInPlace queue
             |> toCSRInPlace queue allocationMode
@@ -334,7 +311,7 @@ module Matrix =
 
         let getChunkIndices = ClArray.sub clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode (matrix: ClMatrix.CSR<'a>) ->
+        fun (processor: RawCommandQueue) allocationMode (matrix: ClMatrix.CSR<'a>) ->
 
             let getChunkValues =
                 getChunkValues processor allocationMode matrix.Values
@@ -372,7 +349,7 @@ module Matrix =
 
         let runLazy = byRowsLazy clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode (matrix: ClMatrix.CSR<'a>) ->
+        fun (processor: RawCommandQueue) allocationMode (matrix: ClMatrix.CSR<'a>) ->
             runLazy processor allocationMode matrix
             |> Seq.map (fun lazyValue -> lazyValue.Value)
 
@@ -385,7 +362,7 @@ module Matrix =
 
         let byRows = byRows clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode (matrix: ClMatrix.CSR<'a>) ->
+        fun (processor: RawCommandQueue) allocationMode (matrix: ClMatrix.CSR<'a>) ->
             let rows =
                 byRows processor allocationMode matrix
                 |> Seq.toList
@@ -407,7 +384,7 @@ module Matrix =
         let subtract =
             Backend.Common.Map.map <@ fun (fst, snd) -> snd - fst @> clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode (matrix: ClMatrix.CSR<'b>) ->
+        fun (processor: RawCommandQueue) allocationMode (matrix: ClMatrix.CSR<'b>) ->
             let pointerPairs =
                 pairwise processor DeviceOnly matrix.RowPointers
                 // since row pointers length in matrix always >= 2
@@ -417,6 +394,6 @@ module Matrix =
             let rowsLength =
                 subtract processor allocationMode pointerPairs
 
-            pointerPairs.Free processor
+            pointerPairs.Free()
 
             rowsLength

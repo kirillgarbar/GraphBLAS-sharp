@@ -28,7 +28,7 @@ module ClArray =
 
         let program = clContext.Compile(init)
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode (length: int) ->
+        fun (processor: RawCommandQueue) allocationMode (length: int) ->
             let outputArray =
                 clContext.CreateClArrayWithSpecificAllocationMode(allocationMode, length)
 
@@ -37,8 +37,8 @@ module ClArray =
             let ndRange =
                 Range1D.CreateValid(length, workGroupSize)
 
-            processor.Post(Msg.MsgSetArguments(fun () -> kernel.KernelFunc ndRange outputArray length))
-            processor.Post(Msg.CreateRunMsg<_, _> kernel)
+            kernel.KernelFunc ndRange outputArray length
+            processor.RunKernel kernel
 
             outputArray
 
@@ -59,7 +59,7 @@ module ClArray =
 
         let program = clContext.Compile(create)
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode (length: int) (value: 'a) ->
+        fun (processor: RawCommandQueue) allocationMode (length: int) (value: 'a) ->
             let value = clContext.CreateClCell(value)
 
             let outputArray =
@@ -70,9 +70,9 @@ module ClArray =
             let ndRange =
                 Range1D.CreateValid(length, workGroupSize)
 
-            processor.Post(Msg.MsgSetArguments(fun () -> kernel.KernelFunc ndRange outputArray length value))
-            processor.Post(Msg.CreateRunMsg<_, _> kernel)
-            value.Free processor
+            kernel.KernelFunc ndRange outputArray length value
+            processor.RunKernel kernel
+            value.Free()
 
             outputArray
 
@@ -85,7 +85,7 @@ module ClArray =
 
         let create = create clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode length ->
+        fun (processor: RawCommandQueue) allocationMode length ->
             create processor allocationMode length Unchecked.defaultof<'a>
 
     /// <summary>
@@ -95,29 +95,30 @@ module ClArray =
     /// <param name="workGroupSize">Should be a power of 2 and greater than 1.</param>
     let copy (clContext: ClContext) workGroupSize =
         let copy =
-            <@ fun (ndRange: Range1D) (inputArrayBuffer: ClArray<'a>) (outputArrayBuffer: ClArray<'a>) inputArrayLength ->
+            <@ fun (ndRange: Range1D) (inputArrayBuffer: ClArray<'a>) (outputArrayBuffer: ClArray<'a>) resultSize ->
 
                 let i = ndRange.GlobalID0
 
-                if i < inputArrayLength then
+                if i < resultSize then
                     outputArrayBuffer.[i] <- inputArrayBuffer.[i] @>
 
         let program = clContext.Compile(copy)
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode (inputArray: ClArray<'a>) ->
+        fun (processor: RawCommandQueue) allocationMode (inputArray: ClArray<'a>) (resultSize: int) ->
+            if resultSize > inputArray.Length then
+                failwith "Result size is greater than input array size"
+
             let ndRange =
-                Range1D.CreateValid(inputArray.Length, workGroupSize)
+                Range1D.CreateValid(resultSize, workGroupSize)
 
             let outputArray =
-                clContext.CreateClArrayWithSpecificAllocationMode(allocationMode, inputArray.Length)
+                clContext.CreateClArrayWithSpecificAllocationMode(allocationMode, resultSize)
 
             let kernel = program.GetKernel()
 
-            processor.Post(
-                Msg.MsgSetArguments(fun () -> kernel.KernelFunc ndRange inputArray outputArray inputArray.Length)
-            )
+            kernel.KernelFunc ndRange inputArray outputArray resultSize
 
-            processor.Post(Msg.CreateRunMsg<_, _> kernel)
+            processor.RunKernel kernel
 
             outputArray
 
@@ -137,7 +138,7 @@ module ClArray =
 
         let program = clContext.Compile(copy)
 
-        fun (processor: DeviceCommandQueue<_>) (source: ClArray<'a>) (destination: ClArray<'a>) ->
+        fun (processor: RawCommandQueue) (source: ClArray<'a>) (destination: ClArray<'a>) ->
             if source.Length <> destination.Length then
                 failwith "The source array length differs from the destination array length."
 
@@ -146,9 +147,9 @@ module ClArray =
 
             let kernel = program.GetKernel()
 
-            processor.Post(Msg.MsgSetArguments(fun () -> kernel.KernelFunc ndRange source destination source.Length))
+            kernel.KernelFunc ndRange source destination source.Length
 
-            processor.Post(Msg.CreateRunMsg<_, _> kernel)
+            processor.RunKernel kernel
 
     /// <summary>
     /// Creates an array of the given size by replicating the values of the given initial array.
@@ -167,7 +168,7 @@ module ClArray =
 
         let kernel = clContext.Compile(replicate)
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode (inputArray: ClArray<'a>) count ->
+        fun (processor: RawCommandQueue) allocationMode (inputArray: ClArray<'a>) count ->
             let outputArrayLength = inputArray.Length * count
 
             let outputArray =
@@ -178,12 +179,9 @@ module ClArray =
 
             let kernel = kernel.GetKernel()
 
-            processor.Post(
-                Msg.MsgSetArguments
-                    (fun () -> kernel.KernelFunc ndRange inputArray outputArray inputArray.Length outputArrayLength)
-            )
+            kernel.KernelFunc ndRange inputArray outputArray inputArray.Length outputArrayLength
 
-            processor.Post(Msg.CreateRunMsg<_, _> kernel)
+            processor.RunKernel kernel
 
             outputArray
 
@@ -195,6 +193,86 @@ module ClArray =
     /// <param name="inputArray">Should be sorted.</param>
     let removeDuplications (clContext: ClContext) workGroupSize =
 
+        let sequential =
+            <@ fun (ndRange: Range1D) (length: int) (keys: ClArray<'a>) (resultKeys: ClArray<'a>) (resultCount: ClCell<int>) ->
+                let gid = ndRange.GlobalID0
+
+                if gid = 0 then
+                    let mutable count = 0
+                    let mutable currentKey = keys.[0]
+
+                    let mutable offset = 1
+
+                    while offset < length do
+                        if keys.[offset] <> currentKey then
+                            resultKeys.[count] <- currentKey
+                            currentKey <- keys.[offset]
+                            count <- count + 1
+
+                        offset <- offset + 1
+
+                    resultKeys.[count] <- currentKey
+                    resultCount.Value <- count + 1 @>
+
+        let maxWorkGroupSize = clContext.ClDevice.MaxWorkGroupSize
+
+        let small =
+            <@ fun (ndRange: Range1D) keysLength (keys: ClArray<'a>) (resultKeys: ClArray<'a>) (resultCount: ClCell<int>) ->
+                let lid = ndRange.LocalID0
+
+                let alignedSize =
+                    (%ArithmeticOperations.ceilToPowerOfTwo) keysLength
+
+                let offsets = localArray<int> maxWorkGroupSize
+
+                let mutable isUniqueKey = 0
+
+                if lid < keysLength then
+                    let is_neq = lid > 0 && keys.[lid] <> keys.[lid - 1]
+                    let is_first = lid = 0
+
+                    if is_neq || is_first then
+                        isUniqueKey <- 1
+                    else
+                        isUniqueKey <- 0
+
+                offsets.[lid] <- isUniqueKey
+
+                let mutable offset = 1
+
+                while offset < alignedSize do
+                    barrierLocal ()
+                    let mutable value = offsets.[lid]
+
+                    if (offset <= lid) then
+                        value <- value + offsets.[lid - offset]
+
+                    barrierLocal ()
+                    offsets.[lid] <- value
+                    offset <- offset * 2
+
+                barrierLocal ()
+
+                let n_values = offsets.[keysLength - 1]
+
+                if lid < n_values then
+                    let id = lid + 1
+
+                    let start_idx =
+                        (%Search.Bin.lowerPositionLocal) keysLength id offsets
+
+                    match start_idx with
+                    | Some idx -> resultKeys.[lid] <- keys.[idx]
+                    | None -> ()
+
+                if lid = 0 then
+                    resultCount.Value <- n_values @>
+
+        let sequential = clContext.Compile sequential
+        let small = clContext.Compile small
+
+        let copy = copy clContext workGroupSize
+
         let scatter =
             Scatter.lastOccurrence clContext workGroupSize
 
@@ -204,23 +282,72 @@ module ClArray =
         let prefixSumExclude =
             ScanInternal.standardExcludeInPlace clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) (inputArray: ClArray<'a>) ->
+        let sequentialSwitch = 32
+        let smallSwitch = maxWorkGroupSize
 
-            let bitmap =
-                getUniqueBitmap processor DeviceOnly inputArray
+        fun (processor: RawCommandQueue) (inputArray: ClArray<'a>) ->
 
-            let resultLength =
-                (prefixSumExclude processor bitmap)
-                    .ToHostAndFree(processor)
+            let inputLength = inputArray.Length
 
-            let outputArray =
-                clContext.CreateClArrayWithSpecificAllocationMode(DeviceOnly, resultLength)
+            if inputLength = 1 then
+                copy processor DeviceOnly inputArray 1
+            elif inputLength <= sequentialSwitch then
+                let resultLength = clContext.CreateClCell<int>()
 
-            scatter processor bitmap inputArray outputArray
+                let temp =
+                    clContext.CreateClArrayWithSpecificAllocationMode(DeviceOnly, inputLength)
 
-            bitmap.Free processor
+                let kernel = sequential.GetKernel()
 
-            outputArray
+                let ndRange = Range1D.CreateValid(1, maxWorkGroupSize)
+
+                kernel.KernelFunc ndRange inputArray.Length inputArray temp resultLength
+
+                processor.RunKernel kernel
+
+                let result =
+                    copy processor DeviceOnly temp (resultLength.ToHostAndFree processor)
+
+                temp.Free()
+
+                result
+            else if inputLength <= smallSwitch then
+                let resultLength = clContext.CreateClCell<int>()
+
+                let temp =
+                    clContext.CreateClArrayWithSpecificAllocationMode(DeviceOnly, inputLength)
+
+                let kernel = small.GetKernel()
+
+                let ndRange =
+                    Range1D.CreateValid(inputLength, maxWorkGroupSize)
+
+                kernel.KernelFunc ndRange inputArray.Length inputArray temp resultLength
+
+                processor.RunKernel kernel
+
+                let result =
+                    copy processor DeviceOnly temp (resultLength.ToHostAndFree processor)
+
+                temp.Free()
+
+                result
+            else
+                let bitmap =
+                    getUniqueBitmap processor DeviceOnly inputArray
+
+                let resultLength =
+                    (prefixSumExclude processor bitmap)
+                        .ToHostAndFree(processor)
+
+                let outputArray =
+                    clContext.CreateClArrayWithSpecificAllocationMode(DeviceOnly, resultLength)
+
+                scatter processor bitmap inputArray outputArray
+
+                bitmap.Free()
+
+                outputArray
 
     /// <summary>
     /// Tests if any element of the array satisfies the given predicate.
@@ -242,7 +369,7 @@ module ClArray =
 
         let kernel = clContext.Compile exists
 
-        fun (processor: DeviceCommandQueue<_>) (vector: ClArray<'a>) ->
+        fun (processor: RawCommandQueue) (vector: ClArray<'a>) ->
 
             let result = clContext.CreateClCell false
 
@@ -251,9 +378,9 @@ module ClArray =
 
             let kernel = kernel.GetKernel()
 
-            processor.Post(Msg.MsgSetArguments(fun () -> kernel.KernelFunc ndRange vector.Length vector result))
+            kernel.KernelFunc ndRange vector.Length vector result
 
-            processor.Post(Msg.CreateRunMsg<_, _>(kernel))
+            processor.RunKernel kernel
 
             result
 
@@ -284,7 +411,7 @@ module ClArray =
 
         let kernel = clContext.Compile assign
 
-        fun (processor: DeviceCommandQueue<_>) (values: ClArray<'a>) (positions: ClArray<int>) (result: ClArray<'b>) ->
+        fun (processor: RawCommandQueue) (values: ClArray<'a>) (positions: ClArray<int>) (result: ClArray<'b>) ->
 
             if values.Length <> positions.Length then
                 failwith "Lengths must be the same"
@@ -294,12 +421,9 @@ module ClArray =
 
             let kernel = kernel.GetKernel()
 
-            processor.Post(
-                Msg.MsgSetArguments
-                    (fun () -> kernel.KernelFunc ndRange values.Length values positions result result.Length)
-            )
+            kernel.KernelFunc ndRange values.Length values positions result result.Length
 
-            processor.Post(Msg.CreateRunMsg<_, _>(kernel))
+            processor.RunKernel kernel
 
     /// <summary>
     /// Applies the given function to each element of the array.
@@ -319,7 +443,7 @@ module ClArray =
         let assignValues =
             assignOption predicate clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode (sourceValues: ClArray<'a>) ->
+        fun (processor: RawCommandQueue) allocationMode (sourceValues: ClArray<'a>) ->
 
             let positions =
                 getBitmap processor DeviceOnly sourceValues
@@ -329,7 +453,7 @@ module ClArray =
                     .ToHostAndFree(processor)
 
             if resultLength = 0 then
-                positions.Free processor
+                positions.Free()
 
                 None
             else
@@ -338,7 +462,7 @@ module ClArray =
 
                 assignValues processor sourceValues positions result
 
-                positions.Free processor
+                positions.Free()
 
                 Some result
 
@@ -371,7 +495,7 @@ module ClArray =
 
         let kernel = clContext.Compile assign
 
-        fun (processor: DeviceCommandQueue<_>) (firstValues: ClArray<'a>) (secondValues: ClArray<'b>) (positions: ClArray<int>) (result: ClArray<'c>) ->
+        fun (processor: RawCommandQueue) (firstValues: ClArray<'a>) (secondValues: ClArray<'b>) (positions: ClArray<int>) (result: ClArray<'c>) ->
 
             if firstValues.Length <> secondValues.Length
                || secondValues.Length <> positions.Length then
@@ -382,20 +506,9 @@ module ClArray =
 
             let kernel = kernel.GetKernel()
 
-            processor.Post(
-                Msg.MsgSetArguments
-                    (fun () ->
-                        kernel.KernelFunc
-                            ndRange
-                            firstValues.Length
-                            firstValues
-                            secondValues
-                            positions
-                            result
-                            result.Length)
-            )
+            kernel.KernelFunc ndRange firstValues.Length firstValues secondValues positions result result.Length
 
-            processor.Post(Msg.CreateRunMsg<_, _>(kernel))
+            processor.RunKernel kernel
 
     /// <summary>
     /// Applies the given function to each pair of elements of the two given arrays.
@@ -415,7 +528,7 @@ module ClArray =
         let assignValues =
             assignOption2 predicate clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode (firstValues: ClArray<'a>) (secondValues: ClArray<'b>) ->
+        fun (processor: RawCommandQueue) allocationMode (firstValues: ClArray<'a>) (secondValues: ClArray<'b>) ->
 
             let positions =
                 getBitmap processor DeviceOnly firstValues secondValues
@@ -450,7 +563,7 @@ module ClArray =
 
         let kernel = clContext.Compile kernel
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode (sourceArray: ClArray<'a>) startIndex count ->
+        fun (processor: RawCommandQueue) allocationMode (sourceArray: ClArray<'a>) startIndex count ->
             if count <= 0 then
                 failwith "Count must be greater than zero"
 
@@ -468,9 +581,9 @@ module ClArray =
 
             let kernel = kernel.GetKernel()
 
-            processor.Post(Msg.MsgSetArguments(fun () -> kernel.KernelFunc ndRange startIndex count sourceArray result))
+            kernel.KernelFunc ndRange startIndex count sourceArray result
 
-            processor.Post(Msg.CreateRunMsg<_, _>(kernel))
+            processor.RunKernel kernel
 
             result
 
@@ -486,7 +599,7 @@ module ClArray =
 
         let sub = sub clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode chunkSize (sourceArray: ClArray<'a>) ->
+        fun (processor: RawCommandQueue) allocationMode chunkSize (sourceArray: ClArray<'a>) ->
             if chunkSize <= 0 then
                 failwith "The size of the chunk cannot be less than 1"
 
@@ -513,7 +626,7 @@ module ClArray =
 
         let chunkBySizeLazy = lazyChunkBySize clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode chunkSize (sourceArray: ClArray<'a>) ->
+        fun (processor: RawCommandQueue) allocationMode chunkSize (sourceArray: ClArray<'a>) ->
             chunkBySizeLazy processor allocationMode chunkSize sourceArray
             |> Seq.map (fun lazyValue -> lazyValue.Value)
             |> Seq.toArray
@@ -538,7 +651,7 @@ module ClArray =
 
         let kernel = clContext.Compile assign
 
-        fun (processor: DeviceCommandQueue<_>) (sourceArray: ClArray<'a>) sourceIndex (targetArray: ClArray<'a>) targetIndex count ->
+        fun (processor: RawCommandQueue) (sourceArray: ClArray<'a>) sourceIndex (targetArray: ClArray<'a>) targetIndex count ->
             if count = 0 then
                 // nothing to do
                 ()
@@ -559,12 +672,9 @@ module ClArray =
 
                 let kernel = kernel.GetKernel()
 
-                processor.Post(
-                    Msg.MsgSetArguments
-                        (fun () -> kernel.KernelFunc ndRange sourceIndex sourceArray targetArray targetIndex count)
-                )
+                kernel.KernelFunc ndRange sourceIndex sourceArray targetArray targetIndex count
 
-                processor.Post(Msg.CreateRunMsg<_, _>(kernel))
+                processor.RunKernel kernel
 
     /// <summary>
     /// Builds a new array that contains the elements of each of the given sequence of arrays.
@@ -575,7 +685,7 @@ module ClArray =
 
         let blit = blit clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode (sourceArrays: ClArray<'a> seq) ->
+        fun (processor: RawCommandQueue) allocationMode (sourceArrays: ClArray<'a> seq) ->
 
             let resultLength =
                 sourceArrays
@@ -613,7 +723,7 @@ module ClArray =
 
         let kernel = clContext.Compile fill
 
-        fun (processor: DeviceCommandQueue<_>) value firstPosition count (targetArray: ClArray<'a>) ->
+        fun (processor: RawCommandQueue) value firstPosition count (targetArray: ClArray<'a>) ->
             if count = 0 then
                 ()
             else
@@ -628,11 +738,9 @@ module ClArray =
 
                 let kernel = kernel.GetKernel()
 
-                processor.Post(
-                    Msg.MsgSetArguments(fun () -> kernel.KernelFunc ndRange firstPosition count value targetArray)
-                )
+                kernel.KernelFunc ndRange firstPosition count value targetArray
 
-                processor.Post(Msg.CreateRunMsg<_, _>(kernel))
+                processor.RunKernel kernel
 
     /// <summary>
     /// Returns an array of each element in the input array and its predecessor,
@@ -651,7 +759,7 @@ module ClArray =
         let map =
             Map.map2 <@ fun first second -> (first, second) @> clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode (values: ClArray<'a>) ->
+        fun (processor: RawCommandQueue) allocationMode (values: ClArray<'a>) ->
             if values.Length > 1 then
                 let resultLength = values.Length - 1
 
@@ -668,8 +776,8 @@ module ClArray =
                 let result =
                     map processor allocationMode firstItems secondItems
 
-                firstItems.Free processor
-                secondItems.Free processor
+                firstItems.Free()
+                secondItems.Free()
 
                 Some result
             else
@@ -693,7 +801,7 @@ module ClArray =
 
         let program = clContext.Compile(kernel)
 
-        fun (processor: DeviceCommandQueue<_>) (values: ClArray<'a>) (value: ClCell<'a>) ->
+        fun (processor: RawCommandQueue) (values: ClArray<'a>) (value: ClCell<'a>) ->
             let result =
                 clContext.CreateClCell Unchecked.defaultof<'b>
 
@@ -701,8 +809,8 @@ module ClArray =
 
             let ndRange = Range1D.CreateValid(1, workGroupSize)
 
-            processor.Post(Msg.MsgSetArguments(fun () -> kernel.KernelFunc ndRange values.Length values value result))
-            processor.Post(Msg.CreateRunMsg<_, _> kernel)
+            kernel.KernelFunc ndRange values.Length values value result
+            processor.RunKernel kernel
 
             result
 
@@ -744,7 +852,7 @@ module ClArray =
 
         let program = clContext.Compile kernel
 
-        fun (processor: DeviceCommandQueue<_>) (index: int) (array: ClArray<'a>) ->
+        fun (processor: RawCommandQueue) (index: int) (array: ClArray<'a>) ->
 
             if index < 0 || index >= array.Length then
                 failwith "Index out of range"
@@ -756,8 +864,8 @@ module ClArray =
 
             let ndRange = Range1D.CreateValid(1, workGroupSize)
 
-            processor.Post(Msg.MsgSetArguments(fun () -> kernel.KernelFunc ndRange index array result))
-            processor.Post(Msg.CreateRunMsg<_, _> kernel)
+            kernel.KernelFunc ndRange index array result
+            processor.RunKernel kernel
 
             result
 
@@ -778,7 +886,7 @@ module ClArray =
 
         let program = clContext.Compile kernel
 
-        fun (processor: DeviceCommandQueue<_>) (array: ClArray<'a>) (index: int) (value: 'a) ->
+        fun (processor: RawCommandQueue) (array: ClArray<'a>) (index: int) (value: 'a) ->
 
             if index < 0 || index >= array.Length then
                 failwith "Index out of range"
@@ -789,8 +897,8 @@ module ClArray =
 
             let ndRange = Range1D.CreateValid(1, workGroupSize)
 
-            processor.Post(Msg.MsgSetArguments(fun () -> kernel.KernelFunc ndRange index array value))
-            processor.Post(Msg.CreateRunMsg<_, _> kernel)
+            kernel.KernelFunc ndRange index array value
+            processor.RunKernel kernel
 
     let count<'a> (predicate: Expr<'a -> bool>) (clContext: ClContext) workGroupSize =
 
@@ -800,14 +908,14 @@ module ClArray =
         let getBitmap =
             Map.map<'a, int> (Map.predicateBitmap predicate) clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) (array: ClArray<'a>) ->
+        fun (processor: RawCommandQueue) (array: ClArray<'a>) ->
 
             let bitmap = getBitmap processor DeviceOnly array
 
             let result =
                 (sum processor bitmap).ToHostAndFree processor
 
-            bitmap.Free processor
+            bitmap.Free()
 
             result
 
@@ -883,7 +991,7 @@ module ClArray =
         let scatter =
             Scatter.lastOccurrence clContext workGroupSize
 
-        fun (queue: DeviceCommandQueue<_>) allocationMode (excludeBitmap: ClArray<int>) (inputArray: ClArray<'a>) ->
+        fun (queue: RawCommandQueue) allocationMode (excludeBitmap: ClArray<int>) (inputArray: ClArray<'a>) ->
 
             invert queue excludeBitmap
 

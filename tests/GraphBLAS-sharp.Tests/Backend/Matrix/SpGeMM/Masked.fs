@@ -50,10 +50,10 @@ let makeTest context q zero isEqual plus mul mxmFun (leftMatrix: 'a [,], rightMa
             let (result: ClMatrix<'a>) = mxmFun q m1 m2 matrixMask
             let actual = result.ToHost q
 
-            m1.Dispose q
-            m2.Dispose q
-            matrixMask.Dispose q
-            result.Dispose q
+            m1.Dispose()
+            m2.Dispose()
+            matrixMask.Dispose()
+            result.Dispose()
 
             // Check result
             "Matrices should be equal"

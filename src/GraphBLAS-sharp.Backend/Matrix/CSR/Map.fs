@@ -41,7 +41,7 @@ module internal Map =
 
         let kernel = clContext.Compile <| preparePositions op
 
-        fun (processor: DeviceCommandQueue<_>) rowCount columnCount (values: ClArray<'a>) (rowPointers: ClArray<int>) (columns: ClArray<int>) ->
+        fun (processor: RawCommandQueue) rowCount columnCount (values: ClArray<'a>) (rowPointers: ClArray<int>) (columns: ClArray<int>) ->
 
             let (resultLength: int) = columnCount * rowCount
 
@@ -62,23 +62,19 @@ module internal Map =
 
             let kernel = kernel.GetKernel()
 
-            processor.Post(
-                Msg.MsgSetArguments
-                    (fun () ->
-                        kernel.KernelFunc
-                            ndRange
-                            rowCount
-                            columnCount
-                            values
-                            rowPointers
-                            columns
-                            resultBitmap
-                            resultValues
-                            resultRows
-                            resultColumns)
-            )
+            kernel.KernelFunc
+                ndRange
+                rowCount
+                columnCount
+                values
+                rowPointers
+                columns
+                resultBitmap
+                resultValues
+                resultRows
+                resultColumns
 
-            processor.Post(Msg.CreateRunMsg<_, _> kernel)
+            processor.RunKernel kernel
 
             resultBitmap, resultValues, resultRows, resultColumns
 
@@ -94,7 +90,7 @@ module internal Map =
         let setPositions =
             Common.setPositions<'b> clContext workGroupSize
 
-        fun (queue: DeviceCommandQueue<_>) allocationMode (matrix: ClMatrix.CSR<'a>) ->
+        fun (queue: RawCommandQueue) allocationMode (matrix: ClMatrix.CSR<'a>) ->
 
             let bitmap, values, rows, columns =
                 map queue matrix.RowCount matrix.ColumnCount matrix.Values matrix.RowPointers matrix.Columns
@@ -102,10 +98,10 @@ module internal Map =
             let resultRows, resultColumns, resultValues, _ =
                 setPositions queue allocationMode rows columns values bitmap
 
-            bitmap.Free queue
-            values.Free queue
-            rows.Free queue
-            columns.Free queue
+            bitmap.Free()
+            values.Free()
+            rows.Free()
+            columns.Free()
 
             { Context = clContext
               RowCount = matrix.RowCount
@@ -144,7 +140,7 @@ module internal Map =
 
             let kernel = clContext.Compile <| preparePositions op
 
-            fun (processor: DeviceCommandQueue<_>) (operand: ClCell<'a option>) (matrix: ClMatrix.CSR<'b>) ->
+            fun (processor: RawCommandQueue) (operand: ClCell<'a option>) (matrix: ClMatrix.CSR<'b>) ->
 
                 let resultLength = matrix.RowCount * matrix.ColumnCount
 
@@ -165,24 +161,20 @@ module internal Map =
 
                 let kernel = kernel.GetKernel()
 
-                processor.Post(
-                    Msg.MsgSetArguments
-                        (fun () ->
-                            kernel.KernelFunc
-                                ndRange
-                                operand
-                                matrix.RowCount
-                                matrix.ColumnCount
-                                matrix.Values
-                                matrix.RowPointers
-                                matrix.Columns
-                                resultBitmap
-                                resultValues
-                                resultRows
-                                resultColumns)
-                )
+                kernel.KernelFunc
+                    ndRange
+                    operand
+                    matrix.RowCount
+                    matrix.ColumnCount
+                    matrix.Values
+                    matrix.RowPointers
+                    matrix.Columns
+                    resultBitmap
+                    resultValues
+                    resultRows
+                    resultColumns
 
-                processor.Post(Msg.CreateRunMsg<_, _> kernel)
+                processor.RunKernel kernel
 
                 resultBitmap, resultValues, resultRows, resultColumns
 
@@ -198,20 +190,20 @@ module internal Map =
             let setPositions =
                 Common.setPositionsOption<'c> clContext workGroupSize
 
-            fun (queue: DeviceCommandQueue<_>) allocationMode (value: 'a option) (matrix: ClMatrix.CSR<'b>) ->
+            fun (queue: RawCommandQueue) allocationMode (value: 'a option) (matrix: ClMatrix.CSR<'b>) ->
                 let valueClCell = clContext.CreateClCell value
 
                 let bitmap, values, rows, columns = mapWithValue queue valueClCell matrix
 
-                valueClCell.Free queue
+                valueClCell.Free()
 
                 let result =
                     setPositions queue allocationMode rows columns values bitmap
 
-                bitmap.Free queue
-                values.Free queue
-                rows.Free queue
-                columns.Free queue
+                bitmap.Free()
+                values.Free()
+                rows.Free()
+                columns.Free()
 
                 result
                 |> Option.map

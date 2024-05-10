@@ -5,6 +5,7 @@ open FSharp.Quotations
 open Microsoft.FSharp.Control
 open GraphBLAS.FSharp.Objects
 open GraphBLAS.FSharp.Objects.ArraysExtensions
+open GraphBLAS.FSharp.Objects.ClCellExtensions
 open GraphBLAS.FSharp.Objects.ClVector
 open GraphBLAS.FSharp.Objects.ClContextExtensions
 open GraphBLAS.FSharp.Backend.Quotes
@@ -37,7 +38,7 @@ module internal Map2 =
         let kernel =
             clContext.Compile <| preparePositions opAdd
 
-        fun (processor: DeviceCommandQueue<_>) (vectorLenght: int) (leftValues: ClArray<'a>) (leftIndices: ClArray<int>) (rightValues: ClArray<'b>) (rightIndices: ClArray<int>) ->
+        fun (processor: RawCommandQueue) (vectorLenght: int) (leftValues: ClArray<'a>) (leftIndices: ClArray<int>) (rightValues: ClArray<'b>) (rightIndices: ClArray<int>) ->
 
             let resultBitmap =
                 clContext.CreateClArrayWithSpecificAllocationMode<int>(DeviceOnly, vectorLenght)
@@ -53,24 +54,20 @@ module internal Map2 =
 
             let kernel = kernel.GetKernel()
 
-            processor.Post(
-                Msg.MsgSetArguments
-                    (fun () ->
-                        kernel.KernelFunc
-                            ndRange
-                            vectorLenght
-                            leftValues.Length
-                            rightValues.Length
-                            leftValues
-                            leftIndices
-                            rightValues
-                            rightIndices
-                            resultBitmap
-                            resultValues
-                            resultIndices)
-            )
+            kernel.KernelFunc
+                ndRange
+                vectorLenght
+                leftValues.Length
+                rightValues.Length
+                leftValues
+                leftIndices
+                rightValues
+                rightIndices
+                resultBitmap
+                resultValues
+                resultIndices
 
-            processor.Post(Msg.CreateRunMsg<_, _> kernel)
+            processor.RunKernel kernel
 
             resultBitmap, resultValues, resultIndices
 
@@ -82,7 +79,7 @@ module internal Map2 =
         let setPositions =
             Common.setPositionsOption clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode (leftVector: ClVector.Sparse<'a>) (rightVector: ClVector.Sparse<'b>) ->
+        fun (processor: RawCommandQueue) allocationMode (leftVector: ClVector.Sparse<'a>) (rightVector: ClVector.Sparse<'b>) ->
 
             let bitmap, allValues, allIndices =
                 prepare
@@ -102,9 +99,9 @@ module internal Map2 =
                           Indices = resultIndices
                           Size = leftVector.Size })
 
-            allIndices.Free processor
-            allValues.Free processor
-            bitmap.Free processor
+            allIndices.Free()
+            allValues.Free()
+            bitmap.Free()
 
             result
 
@@ -134,7 +131,7 @@ module internal Map2 =
         let kernel =
             clContext.Compile <| preparePositions opAdd
 
-        fun (processor: DeviceCommandQueue<_>) (vectorLenght: int) (leftValues: ClArray<'a>) (leftIndices: ClArray<int>) (rightValues: ClArray<'b option>) ->
+        fun (processor: RawCommandQueue) (vectorLenght: int) (leftValues: ClArray<'a>) (leftIndices: ClArray<int>) (rightValues: ClArray<'b option>) ->
 
             let resultBitmap =
                 clContext.CreateClArrayWithSpecificAllocationMode<int>(DeviceOnly, vectorLenght)
@@ -150,21 +147,18 @@ module internal Map2 =
 
             let kernel = kernel.GetKernel()
 
-            processor.Post(
-                Msg.MsgSetArguments
-                    (fun () ->
-                        kernel.KernelFunc
-                            ndRange
-                            vectorLenght
-                            leftValues
-                            leftIndices
-                            rightValues
-                            resultBitmap
-                            resultValues
-                            resultIndices)
-            )
 
-            processor.Post(Msg.CreateRunMsg<_, _> kernel)
+            kernel.KernelFunc
+                ndRange
+                vectorLenght
+                leftValues
+                leftIndices
+                rightValues
+                resultBitmap
+                resultValues
+                resultIndices
+
+            processor.RunKernel kernel
 
             resultBitmap, resultValues, resultIndices
 
@@ -181,7 +175,7 @@ module internal Map2 =
         let setPositions =
             Common.setPositionsOption clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode (leftVector: ClVector.Sparse<'a>) (rightVector: ClArray<'b option>) ->
+        fun (processor: RawCommandQueue) allocationMode (leftVector: ClVector.Sparse<'a>) (rightVector: ClArray<'b option>) ->
 
             let bitmap, allValues, allIndices =
                 prepare processor leftVector.NNZ leftVector.Values leftVector.Indices rightVector
@@ -195,9 +189,9 @@ module internal Map2 =
                           Indices = resultIndices
                           Size = leftVector.Size })
 
-            allIndices.Free processor
-            allValues.Free processor
-            bitmap.Free processor
+            allIndices.Free()
+            allValues.Free()
+            bitmap.Free()
 
             result
 
@@ -232,7 +226,7 @@ module internal Map2 =
 
         let kernel = clContext.Compile <| assign op
 
-        fun (processor: DeviceCommandQueue<_>) (vectorLenght: int) (leftValues: ClArray<'a>) (leftIndices: ClArray<int>) (rightValues: ClArray<'b>) (rightIndices: ClArray<int>) (value: ClCell<'a>) ->
+        fun (processor: RawCommandQueue) (vectorLenght: int) (leftValues: ClArray<'a>) (leftIndices: ClArray<int>) (rightValues: ClArray<'b>) (rightIndices: ClArray<int>) (value: ClCell<'a>) ->
 
             let resultBitmap =
                 clContext.CreateClArrayWithSpecificAllocationMode<int>(DeviceOnly, vectorLenght)
@@ -248,25 +242,22 @@ module internal Map2 =
 
             let kernel = kernel.GetKernel()
 
-            processor.Post(
-                Msg.MsgSetArguments
-                    (fun () ->
-                        kernel.KernelFunc
-                            ndRange
-                            vectorLenght
-                            leftValues.Length
-                            rightValues.Length
-                            leftValues
-                            leftIndices
-                            rightValues
-                            rightIndices
-                            value
-                            resultBitmap
-                            resultValues
-                            resultIndices)
-            )
 
-            processor.Post(Msg.CreateRunMsg<_, _>(kernel))
+            kernel.KernelFunc
+                ndRange
+                vectorLenght
+                leftValues.Length
+                rightValues.Length
+                leftValues
+                leftIndices
+                rightValues
+                rightIndices
+                value
+                resultBitmap
+                resultValues
+                resultIndices
+
+            processor.RunKernel kernel
 
             resultBitmap, resultValues, resultIndices
 
@@ -281,7 +272,7 @@ module internal Map2 =
         let setPositions =
             Common.setPositions clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode (leftVector: ClVector.Sparse<'a>) (rightVector: ClVector.Sparse<'b>) (value: 'a) ->
+        fun (processor: RawCommandQueue) allocationMode (leftVector: ClVector.Sparse<'a>) (rightVector: ClVector.Sparse<'b>) (value: 'a) ->
 
             let valueCell = clContext.CreateClCell(value)
 
@@ -298,10 +289,10 @@ module internal Map2 =
             let resultValues, resultIndices =
                 setPositions processor allocationMode values indices bitmap
 
-            processor.Post(Msg.CreateFreeMsg<_>(valueCell))
-            processor.Post(Msg.CreateFreeMsg<_>(indices))
-            processor.Post(Msg.CreateFreeMsg<_>(values))
-            processor.Post(Msg.CreateFreeMsg<_>(bitmap))
+            valueCell.Free()
+            indices.Free()
+            values.Free()
+            bitmap.Free()
 
             { Context = clContext
               Values = resultValues
@@ -337,7 +328,7 @@ module internal Map2 =
 
             let kernel = clContext.Compile <| preparePositions op
 
-            fun (processor: DeviceCommandQueue<_>) (allIndices: ClArray<int>) (leftValues: ClArray<'a>) (rightValues: ClArray<'b>) (isLeft: ClArray<int>) ->
+            fun (processor: RawCommandQueue) (allIndices: ClArray<int>) (leftValues: ClArray<'a>) (rightValues: ClArray<'b>) (isLeft: ClArray<int>) ->
 
                 let length = allIndices.Length
 
@@ -352,21 +343,9 @@ module internal Map2 =
 
                 let kernel = kernel.GetKernel()
 
-                processor.Post(
-                    Msg.MsgSetArguments
-                        (fun () ->
-                            kernel.KernelFunc
-                                ndRange
-                                length
-                                allIndices
-                                leftValues
-                                rightValues
-                                isLeft
-                                allValues
-                                positions)
-                )
+                kernel.KernelFunc ndRange length allIndices leftValues rightValues isLeft allValues positions
 
-                processor.Post(Msg.CreateRunMsg<_, _>(kernel))
+                processor.RunKernel kernel
 
                 allValues, positions
 
@@ -383,16 +362,16 @@ module internal Map2 =
             let setPositions =
                 Common.setPositionsOption clContext workGroupSize
 
-            fun (processor: DeviceCommandQueue<_>) allocationMode (leftVector: ClVector.Sparse<'a>) (rightVector: ClVector.Sparse<'b>) ->
+            fun (processor: RawCommandQueue) allocationMode (leftVector: ClVector.Sparse<'a>) (rightVector: ClVector.Sparse<'b>) ->
 
                 let allIndices, leftValues, rightValues, isLeft = merge processor leftVector rightVector
 
                 let allValues, positions =
                     prepare processor allIndices leftValues rightValues isLeft
 
-                processor.Post(Msg.CreateFreeMsg<_>(leftValues))
-                processor.Post(Msg.CreateFreeMsg<_>(rightValues))
-                processor.Post(Msg.CreateFreeMsg<_>(isLeft))
+                leftValues.Free()
+                rightValues.Free()
+                isLeft.Free()
 
                 let result =
                     setPositions processor allocationMode allValues allIndices positions
@@ -403,8 +382,8 @@ module internal Map2 =
                               Indices = resultIndices
                               Size = max leftVector.Size rightVector.Size })
 
-                processor.Post(Msg.CreateFreeMsg<_>(allIndices))
-                processor.Post(Msg.CreateFreeMsg<_>(allValues))
-                processor.Post(Msg.CreateFreeMsg<_>(positions))
+                allIndices.Free()
+                allValues.Free()
+                positions.Free()
 
                 result

@@ -7,6 +7,7 @@ open GraphBLAS.FSharp.Objects
 open GraphBLAS.FSharp.Objects.ClMatrix
 open GraphBLAS.FSharp.Objects.ClContextExtensions
 open GraphBLAS.FSharp.Objects.ClCellExtensions
+open GraphBLAS.FSharp.Objects.ArraysExtensions
 
 module internal Masked =
     let private calculate
@@ -107,7 +108,7 @@ module internal Masked =
 
         let program = context.Compile(run)
 
-        fun (queue: DeviceCommandQueue<_>) (matrixLeft: ClMatrix.CSR<'a>) (matrixRight: ClMatrix.CSC<'b>) (mask: ClMatrix.COO<_>) ->
+        fun (queue: RawCommandQueue) (matrixLeft: ClMatrix.CSR<'a>) (matrixRight: ClMatrix.CSC<'b>) (mask: ClMatrix.COO<_>) ->
 
             let values =
                 context.CreateClArrayWithSpecificAllocationMode<'c>(DeviceOnly, mask.NNZ)
@@ -120,24 +121,20 @@ module internal Masked =
             let ndRange =
                 Range1D.CreateValid(workGroupSize * mask.NNZ, workGroupSize)
 
-            queue.Post(
-                Msg.MsgSetArguments
-                    (fun () ->
-                        kernel.KernelFunc
-                            ndRange
-                            matrixLeft.RowPointers
-                            matrixLeft.Columns
-                            matrixLeft.Values
-                            matrixRight.Rows
-                            matrixRight.ColumnPointers
-                            matrixRight.Values
-                            mask.Rows
-                            mask.Columns
-                            values
-                            bitmap)
-            )
+            kernel.KernelFunc
+                ndRange
+                matrixLeft.RowPointers
+                matrixLeft.Columns
+                matrixLeft.Values
+                matrixRight.Rows
+                matrixRight.ColumnPointers
+                matrixRight.Values
+                mask.Rows
+                mask.Columns
+                values
+                bitmap
 
-            queue.Post(Msg.CreateRunMsg<_, _>(kernel))
+            queue.RunKernel(kernel)
 
             values, bitmap
 
@@ -160,7 +157,7 @@ module internal Masked =
         let scanInPlace =
             Common.PrefixSum.standardExcludeInPlace context workGroupSize
 
-        fun (queue: DeviceCommandQueue<_>) (matrixLeft: ClMatrix.CSR<'a>) (matrixRight: ClMatrix.CSC<'b>) (mask: ClMatrix.COO<_>) ->
+        fun (queue: RawCommandQueue) (matrixLeft: ClMatrix.CSR<'a>) (matrixRight: ClMatrix.CSC<'b>) (mask: ClMatrix.COO<_>) ->
 
             let values, positions =
                 calculate queue matrixLeft matrixRight mask
@@ -176,8 +173,8 @@ module internal Masked =
             scatter queue positions mask.Columns resultColumns
             scatterData queue positions values resultValues
 
-            queue.Post(Msg.CreateFreeMsg<_>(values))
-            queue.Post(Msg.CreateFreeMsg<_>(positions))
+            values.Free()
+            positions.Free()
 
             { Context = context
               RowCount = matrixLeft.RowCount

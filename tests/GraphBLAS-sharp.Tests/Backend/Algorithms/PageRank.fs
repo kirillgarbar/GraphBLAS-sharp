@@ -102,8 +102,8 @@ let testFixtures (testContext: TestContext) =
 
               let resHost = res.ToHost queue
 
-              preparedMatrix.Dispose queue
-              matrix.Dispose queue
+              preparedMatrix.Dispose()
+              matrix.Dispose()
               res.Dispose()
 
               match resHost with

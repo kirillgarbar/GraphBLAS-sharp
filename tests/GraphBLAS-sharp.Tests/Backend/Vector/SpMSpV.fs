@@ -86,7 +86,7 @@ let correctnessGenericTest
 
                 match spMV testContext.Queue m v with
                 | Some (ClVector.Sparse res) ->
-                    m.Dispose q
+                    m.Dispose()
                     v.Dispose()
                     let hostResIndices = res.Indices.ToHost q
                     let hostResValues = res.Values.ToHost q

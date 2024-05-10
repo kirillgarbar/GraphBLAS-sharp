@@ -8,6 +8,7 @@ open GraphBLAS.FSharp.Objects
 open GraphBLAS.FSharp.Backend
 open GraphBLAS.FSharp.Objects.ClMatrix
 open GraphBLAS.FSharp.Objects.ClContextExtensions
+open GraphBLAS.FSharp.Objects.ArraysExtensions
 
 module internal Map =
     let private preparePositions<'a, 'b> opAdd (clContext: ClContext) workGroupSize =
@@ -40,7 +41,7 @@ module internal Map =
         let kernel =
             clContext.Compile <| preparePositions opAdd
 
-        fun (processor: DeviceCommandQueue<_>) rowCount columnCount (values: ClArray<'a>) (rowPointers: ClArray<int>) (columns: ClArray<int>) ->
+        fun (processor: RawCommandQueue) rowCount columnCount (values: ClArray<'a>) (rowPointers: ClArray<int>) (columns: ClArray<int>) ->
 
             let (resultLength: int) = columnCount * rowCount
 
@@ -61,24 +62,21 @@ module internal Map =
 
             let kernel = kernel.GetKernel()
 
-            processor.Post(
-                Msg.MsgSetArguments
-                    (fun () ->
-                        kernel.KernelFunc
-                            ndRange
-                            rowCount
-                            columnCount
-                            values.Length
-                            values
-                            rowPointers
-                            columns
-                            resultBitmap
-                            resultValues
-                            resultRows
-                            resultColumns)
-            )
 
-            processor.Post(Msg.CreateRunMsg<_, _> kernel)
+            kernel.KernelFunc
+                ndRange
+                rowCount
+                columnCount
+                values.Length
+                values
+                rowPointers
+                columns
+                resultBitmap
+                resultValues
+                resultRows
+                resultColumns
+
+            processor.RunKernel kernel
 
             resultBitmap, resultValues, resultRows, resultColumns
 
@@ -94,7 +92,7 @@ module internal Map =
         let setPositions =
             Common.setPositions<'b> clContext workGroupSize
 
-        fun (queue: DeviceCommandQueue<_>) allocationMode (matrix: ClMatrix.COO<'a>) ->
+        fun (queue: RawCommandQueue) allocationMode (matrix: ClMatrix.COO<'a>) ->
 
             let bitmap, values, rows, columns =
                 map queue matrix.RowCount matrix.ColumnCount matrix.Values matrix.Rows matrix.Columns
@@ -102,10 +100,10 @@ module internal Map =
             let resultRows, resultColumns, resultValues, _ =
                 setPositions queue allocationMode rows columns values bitmap
 
-            queue.Post(Msg.CreateFreeMsg<_>(bitmap))
-            queue.Post(Msg.CreateFreeMsg<_>(values))
-            queue.Post(Msg.CreateFreeMsg<_>(rows))
-            queue.Post(Msg.CreateFreeMsg<_>(columns))
+            bitmap.Free()
+            values.Free()
+            rows.Free()
+            columns.Free()
 
             { Context = clContext
               RowCount = matrix.RowCount

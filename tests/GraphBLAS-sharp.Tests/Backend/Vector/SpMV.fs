@@ -72,7 +72,7 @@ let correctnessGenericTest
 
             let res = spMV testContext.Queue HostInterop m v
 
-            m.Dispose q
+            m.Dispose()
             v.Dispose()
 
             match res with

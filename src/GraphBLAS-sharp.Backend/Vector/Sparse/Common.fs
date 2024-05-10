@@ -20,7 +20,7 @@ module internal Common =
         let indicesScatter =
             Common.Scatter.lastOccurrence clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode (allValues: ClArray<'a>) (allIndices: ClArray<int>) (positions: ClArray<int>) ->
+        fun (processor: RawCommandQueue) allocationMode (allValues: ClArray<'a>) (allIndices: ClArray<int>) (positions: ClArray<int>) ->
 
             let resultLength =
                 (sum processor positions).ToHostAndFree(processor)
@@ -48,7 +48,7 @@ module internal Common =
         let indicesScatter =
             Common.Scatter.lastOccurrence clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode (allValues: ClArray<'a>) (allIndices: ClArray<int>) (positions: ClArray<int>) ->
+        fun (processor: RawCommandQueue) allocationMode (allValues: ClArray<'a>) (allIndices: ClArray<int>) (positions: ClArray<int>) ->
 
             let resultLength =
                 (sum processor positions).ToHostAndFree(processor)
@@ -77,7 +77,7 @@ module internal Common =
         let mapIndices =
             Common.Map.mapWithValue clContext workGroupSize <@ fun x y -> x + y @>
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode (vectors: Sparse<'a> seq) ->
+        fun (processor: RawCommandQueue) allocationMode (vectors: Sparse<'a> seq) ->
 
             let vectorIndices, _ =
                 vectors

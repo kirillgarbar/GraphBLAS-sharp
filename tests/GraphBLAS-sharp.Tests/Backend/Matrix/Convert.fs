@@ -33,8 +33,8 @@ let makeTest context q formatFrom formatTo convertFun isZero (array: 'a [,]) =
             let mBefore = mtx.ToDevice context
             let mAfter: ClMatrix<'a> = convertFun q HostInterop mBefore
             let res = mAfter.ToHost q
-            mBefore.Dispose q
-            mAfter.Dispose q
+            mBefore.Dispose()
+            mAfter.Dispose()
             res
 
         logger.debug (

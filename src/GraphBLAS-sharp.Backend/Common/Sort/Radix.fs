@@ -76,7 +76,7 @@ module internal Radix =
 
         let kernel = clContext.Compile kernel
 
-        fun (processor: DeviceCommandQueue<_>) (indices: ClArray<int>) (clWorkGroupCount: ClCell<int>) (shift: ClCell<int>) ->
+        fun (processor: RawCommandQueue) (indices: ClArray<int>) (clWorkGroupCount: ClCell<int>) (shift: ClCell<int>) ->
             let ndRange =
                 Range1D.CreateValid(indices.Length, workGroupSize)
 
@@ -92,20 +92,16 @@ module internal Radix =
 
             let kernel = kernel.GetKernel()
 
-            processor.Post(
-                Msg.MsgSetArguments
-                    (fun () ->
-                        kernel.KernelFunc
-                            ndRange
-                            indices.Length
-                            indices
-                            clWorkGroupCount
-                            shift
-                            globalOffsets
-                            localOffsets)
-            )
+            kernel.KernelFunc
+                ndRange
+                indices.Length
+                indices
+                clWorkGroupCount
+                shift
+                globalOffsets
+                localOffsets
 
-            processor.Post(Msg.CreateRunMsg<_, _>(kernel))
+            processor.RunKernel kernel
 
             globalOffsets, localOffsets
 
@@ -133,20 +129,16 @@ module internal Radix =
 
         let kernel = clContext.Compile kernel
 
-        fun (processor: DeviceCommandQueue<_>) (keys: ClArray<int>) (shift: ClCell<int>) (workGroupCount: ClCell<int>) (globalOffset: ClArray<int>) (localOffsets: ClArray<int>) (result: ClArray<int>) ->
+        fun (processor: RawCommandQueue) (keys: ClArray<int>) (shift: ClCell<int>) (workGroupCount: ClCell<int>) (globalOffset: ClArray<int>) (localOffsets: ClArray<int>) (result: ClArray<int>) ->
 
             let ndRange =
                 Range1D.CreateValid(keys.Length, workGroupSize)
 
             let kernel = kernel.GetKernel()
 
-            processor.Post(
-                Msg.MsgSetArguments
-                    (fun () ->
-                        kernel.KernelFunc ndRange keys.Length keys shift workGroupCount globalOffset localOffsets result)
-            )
+            kernel.KernelFunc ndRange keys.Length keys shift workGroupCount globalOffset localOffsets result
 
-            processor.Post(Msg.CreateRunMsg<_, _>(kernel))
+            processor.RunKernel kernel
 
     let private runKeysOnly (clContext: ClContext) workGroupSize bitCount =
         let copy = ClArray.copy clContext workGroupSize
@@ -160,11 +152,11 @@ module internal Radix =
 
         let scatter = scatter clContext workGroupSize mask
 
-        fun (processor: DeviceCommandQueue<_>) (keys: ClArray<int>) ->
+        fun (processor: RawCommandQueue) (keys: ClArray<int>) ->
             if keys.Length <= 1 then
-                copy processor DeviceOnly keys // TODO(allocation mode)
+                copy processor DeviceOnly keys keys.Length
             else
-                let firstKeys = copy processor DeviceOnly keys
+                let firstKeys = copy processor DeviceOnly keys keys.Length 
 
                 let secondKeys =
                     clContext.CreateClArrayWithSpecificAllocationMode(DeviceOnly, keys.Length)
@@ -183,17 +175,17 @@ module internal Radix =
                     let globalOffset, localOffset =
                         count processor (fst pair) workGroupCount shift
 
-                    (prefixSum processor globalOffset).Free processor
+                    (prefixSum processor globalOffset).Free()
 
                     scatter processor (fst pair) shift workGroupCount globalOffset localOffset (snd pair)
 
                     pair <- swap pair
 
-                    globalOffset.Free processor
-                    localOffset.Free processor
-                    shift.Free processor
+                    globalOffset.Free()
+                    localOffset.Free()
+                    shift.Free()
 
-                (snd pair).Free processor
+                (snd pair).Free()
                 fst pair
 
     let standardRunKeysOnly clContext workGroupSize =
@@ -224,30 +216,26 @@ module internal Radix =
 
         let kernel = clContext.Compile kernel
 
-        fun (processor: DeviceCommandQueue<_>) (keys: ClArray<int>) (values: ClArray<'a>) (shift: ClCell<int>) (workGroupCount: ClCell<int>) (globalOffset: ClArray<int>) (localOffsets: ClArray<int>) (resultKeys: ClArray<int>) (resultValues: ClArray<'a>) ->
+        fun (processor: RawCommandQueue) (keys: ClArray<int>) (values: ClArray<'a>) (shift: ClCell<int>) (workGroupCount: ClCell<int>) (globalOffset: ClArray<int>) (localOffsets: ClArray<int>) (resultKeys: ClArray<int>) (resultValues: ClArray<'a>) ->
 
             let ndRange =
                 Range1D.CreateValid(keys.Length, workGroupSize)
 
             let kernel = kernel.GetKernel()
 
-            processor.Post(
-                Msg.MsgSetArguments
-                    (fun () ->
-                        kernel.KernelFunc
-                            ndRange
-                            keys.Length
-                            keys
-                            values
-                            shift
-                            workGroupCount
-                            globalOffset
-                            localOffsets
-                            resultKeys
-                            resultValues)
-            )
+            kernel.KernelFunc
+                ndRange
+                keys.Length
+                keys
+                values
+                shift
+                workGroupCount
+                globalOffset
+                localOffsets
+                resultKeys
+                resultValues
 
-            processor.Post(Msg.CreateRunMsg<_, _>(kernel))
+            processor.RunKernel kernel
 
     let private runByKeys (clContext: ClContext) workGroupSize bitCount =
         let copy = ClArray.copy clContext workGroupSize
@@ -264,19 +252,19 @@ module internal Radix =
         let scatterByKey =
             scatterByKey clContext workGroupSize mask
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode (keys: ClArray<int>) (values: ClArray<'a>) ->
+        fun (processor: RawCommandQueue) allocationMode (keys: ClArray<int>) (values: ClArray<'a>) ->
             if values.Length <> keys.Length then
                 failwith "Mismatch of key lengths and value. Lengths must be the same"
 
             if values.Length <= 1 then
-                copy processor DeviceOnly keys, dataCopy processor DeviceOnly values
+                copy processor DeviceOnly keys keys.Length, dataCopy processor DeviceOnly values values.Length
             else
-                let firstKeys = copy processor DeviceOnly keys
+                let firstKeys = copy processor DeviceOnly keys keys.Length
 
                 let secondKeys =
                     clContext.CreateClArrayWithSpecificAllocationMode(DeviceOnly, keys.Length)
 
-                let firstValues = dataCopy processor DeviceOnly values
+                let firstValues = dataCopy processor DeviceOnly values values.Length
 
                 let secondValues =
                     clContext.CreateClArrayWithSpecificAllocationMode(DeviceOnly, values.Length)
@@ -303,7 +291,7 @@ module internal Radix =
                     let globalOffset, localOffset =
                         count processor currentKeys workGroupCount shift
 
-                    (prefixSum processor globalOffset).Free processor
+                    (prefixSum processor globalOffset).Free()
 
                     scatterByKey
                         processor
@@ -319,12 +307,12 @@ module internal Radix =
                     keysPair <- swap keysPair
                     valuesPair <- swap valuesPair
 
-                    globalOffset.Free processor
-                    localOffset.Free processor
-                    shift.Free processor
+                    globalOffset.Free()
+                    localOffset.Free()
+                    shift.Free()
 
-                (snd keysPair).Free processor
-                (snd valuesPair).Free processor
+                (snd keysPair).Free()
+                (snd valuesPair).Free()
 
                 (fst keysPair, fst valuesPair)
 
@@ -332,11 +320,11 @@ module internal Radix =
         let runByKeys =
             runByKeys clContext workGroupSize defaultBitCount
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode (keys: ClArray<int>) (values: ClArray<'a>) ->
+        fun (processor: RawCommandQueue) allocationMode (keys: ClArray<int>) (values: ClArray<'a>) ->
             let keys, values =
                 runByKeys processor allocationMode keys values
 
-            keys.Free processor
+            keys.Free()
 
             values
 

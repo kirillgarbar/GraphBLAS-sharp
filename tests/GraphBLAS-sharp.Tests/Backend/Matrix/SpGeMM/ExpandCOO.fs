@@ -41,7 +41,7 @@ let makeGeneralTest zero isEqual opAdd opMul testFun (leftArray: 'a [,], rightAr
         | Some clMatrixActual ->
 
             let matrixActual = clMatrixActual.ToHost processor
-            clMatrixActual.Dispose processor
+            clMatrixActual.Dispose()
 
             Utils.compareCOOMatrix isEqual matrixActual expected
         | None ->

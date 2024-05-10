@@ -24,32 +24,32 @@ module Matrix =
         let vectorCopy =
             Sparse.Vector.copy clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode (matrix: ClMatrix<'a>) ->
+        fun (processor: RawCommandQueue) allocationMode (matrix: ClMatrix<'a>) ->
             match matrix with
             | ClMatrix.COO m ->
                 ClMatrix.COO
                     { Context = clContext
                       RowCount = m.RowCount
                       ColumnCount = m.ColumnCount
-                      Rows = copy processor allocationMode m.Rows
-                      Columns = copy processor allocationMode m.Columns
-                      Values = copyData processor allocationMode m.Values }
+                      Rows = copy processor allocationMode m.Rows m.Rows.Length
+                      Columns = copy processor allocationMode m.Columns m.Columns.Length
+                      Values = copyData processor allocationMode m.Values m.Values.Length }
             | ClMatrix.CSR m ->
                 ClMatrix.CSR
                     { Context = clContext
                       RowCount = m.RowCount
                       ColumnCount = m.ColumnCount
-                      RowPointers = copy processor allocationMode m.RowPointers
-                      Columns = copy processor allocationMode m.Columns
-                      Values = copyData processor allocationMode m.Values }
+                      RowPointers = copy processor allocationMode m.RowPointers m.RowPointers.Length
+                      Columns = copy processor allocationMode m.Columns m.Columns.Length
+                      Values = copyData processor allocationMode m.Values m.Values.Length }
             | ClMatrix.CSC m ->
                 ClMatrix.CSC
                     { Context = clContext
                       RowCount = m.RowCount
                       ColumnCount = m.ColumnCount
-                      Rows = copy processor allocationMode m.Rows
-                      ColumnPointers = copy processor allocationMode m.ColumnPointers
-                      Values = copyData processor allocationMode m.Values }
+                      Rows = copy processor allocationMode m.Rows m.Rows.Length
+                      ColumnPointers = copy processor allocationMode m.ColumnPointers m.ColumnPointers.Length
+                      Values = copyData processor allocationMode m.Values m.Values.Length }
             | ClMatrix.LIL matrix ->
                 matrix.Rows
                 |> List.map (Option.map (vectorCopy processor allocationMode))
@@ -75,7 +75,7 @@ module Matrix =
         let vectorCopyTo =
             Sparse.Vector.copyTo clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) (source: ClMatrix<'a>) (destination: ClMatrix<'a>) ->
+        fun (processor: RawCommandQueue) (source: ClMatrix<'a>) (destination: ClMatrix<'a>) ->
             if source.NNZ <> destination.NNZ
                || source.RowCount <> destination.RowCount
                || source.ColumnCount <> destination.ColumnCount then
@@ -119,7 +119,7 @@ module Matrix =
 
         let rowsToCSR = LIL.Matrix.toCSR clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode (matrix: ClMatrix<'a>) ->
+        fun (processor: RawCommandQueue) allocationMode (matrix: ClMatrix<'a>) ->
             match matrix with
             | ClMatrix.COO m -> toCSR processor allocationMode m |> ClMatrix.CSR
             | ClMatrix.CSR _ -> copy processor allocationMode matrix
@@ -144,7 +144,7 @@ module Matrix =
         let transposeInPlace =
             CSR.Matrix.transposeInPlace clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode (matrix: ClMatrix<'a>) ->
+        fun (processor: RawCommandQueue) allocationMode (matrix: ClMatrix<'a>) ->
             match matrix with
             | ClMatrix.COO m ->
                 toCSRInPlace processor allocationMode m
@@ -171,7 +171,7 @@ module Matrix =
 
         let rowsToCSR = LIL.Matrix.toCSR clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode (matrix: ClMatrix<'a>) ->
+        fun (processor: RawCommandQueue) allocationMode (matrix: ClMatrix<'a>) ->
             match matrix with
             | ClMatrix.COO _ -> copy processor allocationMode matrix
             | ClMatrix.CSR m -> toCOO processor allocationMode m |> ClMatrix.COO
@@ -198,7 +198,7 @@ module Matrix =
         let transposeInPlace =
             COO.Matrix.transposeInPlace clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode (matrix: ClMatrix<'a>) ->
+        fun (processor: RawCommandQueue) allocationMode (matrix: ClMatrix<'a>) ->
             match matrix with
             | ClMatrix.COO _ -> matrix
             | ClMatrix.CSR m ->
@@ -229,7 +229,7 @@ module Matrix =
 
         let rowsToCSR = LIL.Matrix.toCSR clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode (matrix: ClMatrix<'a>) ->
+        fun (processor: RawCommandQueue) allocationMode (matrix: ClMatrix<'a>) ->
             match matrix with
             | ClMatrix.CSC _ -> copy processor allocationMode matrix
             | ClMatrix.CSR m ->
@@ -262,7 +262,7 @@ module Matrix =
         let transposeCOOInPlace =
             COO.Matrix.transposeInPlace clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode (matrix: ClMatrix<'a>) ->
+        fun (processor: RawCommandQueue) allocationMode (matrix: ClMatrix<'a>) ->
             match matrix with
             | ClMatrix.CSC _ -> matrix
             | ClMatrix.CSR m ->
@@ -292,7 +292,7 @@ module Matrix =
 
         let CSRToLIL = CSR.Matrix.toLIL clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode (matrix: ClMatrix<'a>) ->
+        fun (processor: RawCommandQueue) allocationMode (matrix: ClMatrix<'a>) ->
             match matrix with
             | ClMatrix.CSC m ->
                 m.ToCSR
@@ -325,7 +325,7 @@ module Matrix =
         let COOTransposeInPlace =
             COO.Matrix.transposeInPlace clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) matrix ->
+        fun (processor: RawCommandQueue) matrix ->
             match matrix with
             | ClMatrix.COO m -> COOTransposeInPlace processor m |> ClMatrix.COO
             | ClMatrix.CSR m -> ClMatrix.CSC m.ToCSC
@@ -352,7 +352,7 @@ module Matrix =
 
         let copyData = ClArray.copy clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode matrix ->
+        fun (processor: RawCommandQueue) allocationMode matrix ->
             match matrix with
             | ClMatrix.COO m ->
                 COOTranspose processor allocationMode m
@@ -361,17 +361,17 @@ module Matrix =
                 { Context = m.Context
                   RowCount = m.ColumnCount
                   ColumnCount = m.RowCount
-                  Rows = copy processor allocationMode m.Columns
-                  ColumnPointers = copy processor allocationMode m.RowPointers
-                  Values = copyData processor allocationMode m.Values }
+                  Rows = copy processor allocationMode m.Columns m.Columns.Length
+                  ColumnPointers = copy processor allocationMode m.RowPointers m.RowPointers.Length
+                  Values = copyData processor allocationMode m.Values m.Values.Length }
                 |> ClMatrix.CSC
             | ClMatrix.CSC m ->
                 { Context = m.Context
                   RowCount = m.ColumnCount
                   ColumnCount = m.RowCount
-                  RowPointers = copy processor allocationMode m.ColumnPointers
-                  Columns = copy processor allocationMode m.Rows
-                  Values = copyData processor allocationMode m.Values }
+                  RowPointers = copy processor allocationMode m.ColumnPointers m.ColumnPointers.Length
+                  Columns = copy processor allocationMode m.Rows m.Rows.Length
+                  Values = copyData processor allocationMode m.Values m.Values.Length }
                 |> ClMatrix.CSR
             | ClMatrix.LIL _ -> failwith "Not yet implemented"
 

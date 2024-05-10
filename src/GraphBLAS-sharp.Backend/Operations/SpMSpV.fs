@@ -1,4 +1,4 @@
-﻿namespace GraphBLAS.FSharp.Backend.Operations
+namespace GraphBLAS.FSharp.Backend.Operations
 
 open Brahma.FSharp
 open GraphBLAS.FSharp.Backend.Common
@@ -33,7 +33,7 @@ module SpMSpV =
 
         let collectRows = clContext.Compile collectRows
 
-        fun (queue: DeviceCommandQueue<_>) size (vectorIndices: ClArray<int>) (rowOffsets: ClArray<int>) ->
+        fun (queue: RawCommandQueue) size (vectorIndices: ClArray<int>) (rowOffsets: ClArray<int>) ->
 
             let ndRange =
                 Range1D.CreateValid(size * 2 + 1, workGroupSize)
@@ -44,11 +44,9 @@ module SpMSpV =
 
             let collectRows = collectRows.GetKernel()
 
-            queue.Post(
-                Msg.MsgSetArguments(fun () -> collectRows.KernelFunc ndRange size vectorIndices rowOffsets resultRows)
-            )
+            collectRows.KernelFunc ndRange size vectorIndices rowOffsets resultRows
 
-            queue.Post(Msg.CreateRunMsg<_, _>(collectRows))
+            queue.RunKernel(collectRows)
 
             resultRows
 
@@ -69,15 +67,15 @@ module SpMSpV =
 
         let prepareOffsets = clContext.Compile prepareOffsets
 
-        fun (queue: DeviceCommandQueue<_>) size (input: ClArray<int>) ->
+        fun (queue: RawCommandQueue) size (input: ClArray<int>) ->
 
             let ndRange = Range1D.CreateValid(size, workGroupSize)
 
             let prepareOffsets = prepareOffsets.GetKernel()
 
-            queue.Post(Msg.MsgSetArguments(fun () -> prepareOffsets.KernelFunc ndRange size input))
+            prepareOffsets.KernelFunc ndRange size input
 
-            queue.Post(Msg.CreateRunMsg<_, _>(prepareOffsets))
+            queue.RunKernel(prepareOffsets)
 
             let resSize = (sum queue input).ToHostAndFree queue
 
@@ -115,7 +113,7 @@ module SpMSpV =
 
         let gather = clContext.Compile gather
 
-        fun (queue: DeviceCommandQueue<_>) (matrix: ClMatrix.CSR<'a>) (vector: ClVector.Sparse<'b>) ->
+        fun (queue: RawCommandQueue) (matrix: ClMatrix.CSR<'a>) (vector: ClVector.Sparse<'b>) ->
 
             //Collect R[v] and R[v + 1] for each v in vector
             let collectedRows =
@@ -126,7 +124,7 @@ module SpMSpV =
                 computeOffsetsInplace queue (vector.NNZ * 2 + 1) collectedRows
 
             if gatherArraySize = 0 then
-                collectedRows.Free queue
+                collectedRows.Free()
                 None
             else
                 let ndRange =
@@ -144,25 +142,21 @@ module SpMSpV =
                     clContext.CreateClArrayWithSpecificAllocationMode<'a>(DeviceOnly, gatherArraySize)
 
                 if gatherArraySize > 0 then
-                    queue.Post(
-                        Msg.MsgSetArguments
-                            (fun () ->
-                                gather.KernelFunc
-                                    ndRange
-                                    vector.NNZ
-                                    collectedRows
-                                    matrix.RowPointers
-                                    matrix.Columns
-                                    matrix.Values
-                                    vector.Indices
-                                    resultRows
-                                    resultIndices
-                                    resultValues)
-                    )
+                    gather.KernelFunc
+                        ndRange
+                        vector.NNZ
+                        collectedRows
+                        matrix.RowPointers
+                        matrix.Columns
+                        matrix.Values
+                        vector.Indices
+                        resultRows
+                        resultIndices
+                        resultValues
 
-                    queue.Post(Msg.CreateRunMsg<_, _>(gather))
+                    queue.RunKernel gather
 
-                collectedRows.Free queue
+                collectedRows.Free()
 
                 Some(resultRows, resultIndices, resultValues)
 
@@ -185,7 +179,7 @@ module SpMSpV =
 
         let multiply = clContext.Compile multiply
 
-        fun (queue: DeviceCommandQueue<_>) (columnIndices: ClArray<int>) (matrixValues: ClArray<'a>) (vector: Sparse<'b>) ->
+        fun (queue: RawCommandQueue) (columnIndices: ClArray<int>) (matrixValues: ClArray<'a>) (vector: Sparse<'b>) ->
 
             let resultLength = columnIndices.Length
 
@@ -197,21 +191,17 @@ module SpMSpV =
 
             let multiply = multiply.GetKernel()
 
-            queue.Post(
-                Msg.MsgSetArguments
-                    (fun () ->
-                        multiply.KernelFunc
-                            ndRange
-                            resultLength
-                            vector.NNZ
-                            columnIndices
-                            matrixValues
-                            vector.Indices
-                            vector.Values
-                            result)
-            )
+            multiply.KernelFunc
+                ndRange
+                resultLength
+                vector.NNZ
+                columnIndices
+                matrixValues
+                vector.Indices
+                vector.Values
+                result
 
-            queue.Post(Msg.CreateRunMsg<_, _>(multiply))
+            queue.RunKernel(multiply)
 
             result
 
@@ -225,9 +215,8 @@ module SpMSpV =
         //TODO: Common.Gather?
         let gather = gather clContext workGroupSize
 
-        //TODO: Radix sort
         let sort =
-            Sort.Bitonic.sortKeyValuesInplace clContext workGroupSize
+            Sort.Bitonic.sortRowsColumnsValuesInplace clContext workGroupSize
 
         let multiplyScalar =
             multiplyScalar clContext mul workGroupSize
@@ -235,7 +224,7 @@ module SpMSpV =
         let segReduce =
             Reduce.ByKey.Option.segmentSequential add clContext workGroupSize
 
-        fun (queue: DeviceCommandQueue<_>) (matrix: ClMatrix.CSR<'a>) (vector: ClVector.Sparse<'b>) ->
+        fun (queue: RawCommandQueue) (matrix: ClMatrix.CSR<'a>) (vector: ClVector.Sparse<'b>) ->
             gather queue matrix vector
             |> Option.map
                 (fun (gatherRows, gatherIndices, gatherValues) ->
@@ -246,8 +235,8 @@ module SpMSpV =
                     let multipliedValues =
                         multiplyScalar queue sortedRows sortedValues vector
 
-                    sortedValues.Free queue
-                    sortedRows.Free queue
+                    sortedValues.Free()
+                    sortedRows.Free()
 
                     let result =
                         segReduce queue DeviceOnly sortedIndices multipliedValues
@@ -259,8 +248,8 @@ module SpMSpV =
                                   Values = reducedValues
                                   Size = matrix.ColumnCount })
 
-                    multipliedValues.Free queue
-                    sortedIndices.Free queue
+                    multipliedValues.Free()
+                    sortedIndices.Free()
 
                     result)
             |> Option.bind id
@@ -276,7 +265,7 @@ module SpMSpV =
         let gather = gather clContext workGroupSize
 
         let sort =
-            Sort.Bitonic.sortKeyValuesInplace clContext workGroupSize
+            Sort.Bitonic.sortRowsColumnsValuesInplace clContext workGroupSize
 
         let removeDuplicates =
             GraphBLAS.FSharp.ClArray.removeDuplications clContext workGroupSize
@@ -284,7 +273,7 @@ module SpMSpV =
         let create =
             GraphBLAS.FSharp.ClArray.create clContext workGroupSize
 
-        fun (queue: DeviceCommandQueue<_>) (matrix: ClMatrix.CSR<'a>) (vector: ClVector.Sparse<'b>) ->
+        fun (queue: RawCommandQueue) (matrix: ClMatrix.CSR<'a>) (vector: ClVector.Sparse<'b>) ->
 
             gather queue matrix vector
             |> Option.map
@@ -293,9 +282,9 @@ module SpMSpV =
 
                     let resultIndices = removeDuplicates queue gatherIndices
 
-                    gatherIndices.Free queue
-                    gatherRows.Free queue
-                    gatherValues.Free queue
+                    gatherIndices.Free()
+                    gatherRows.Free()
+                    gatherValues.Free()
 
                     { Context = clContext
                       Indices = resultIndices

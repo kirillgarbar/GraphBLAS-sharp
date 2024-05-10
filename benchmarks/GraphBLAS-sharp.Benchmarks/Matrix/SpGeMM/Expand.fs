@@ -77,11 +77,11 @@ type Benchmarks<'elem when 'elem : struct>(
         this.ResultMatrix <- this.FunToBenchmark this.Processor DeviceOnly matrix matrix
 
     member this.ClearInputMatrices() =
-        matrix.Dispose this.Processor
+        matrix.Dispose()
 
     member this.ClearResult() =
         match this.ResultMatrix with
-        | Some matrix -> matrix.Dispose this.Processor
+        | Some matrix -> matrix.Dispose()
         | None -> ()
 
     member this.ReadMatrices() =

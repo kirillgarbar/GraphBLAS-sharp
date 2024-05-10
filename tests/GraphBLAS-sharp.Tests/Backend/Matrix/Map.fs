@@ -71,13 +71,13 @@ let correctnessGenericTest
 
                 let res = addFun q HostInterop m
 
-                m.Dispose q
+                m.Dispose()
 
                 let (cooRes: ClMatrix<'a>) = toCOOFun q HostInterop res
                 let actual = cooRes.ToHost q
 
-                cooRes.Dispose q
-                res.Dispose q
+                cooRes.Dispose()
+                res.Dispose()
 
                 logger.debug (
                     eventX "Actual is {actual}"

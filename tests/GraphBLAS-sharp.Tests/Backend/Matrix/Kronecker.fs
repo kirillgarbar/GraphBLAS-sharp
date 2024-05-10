@@ -52,11 +52,11 @@ let makeTest testContext zero isEqual op kroneckerFun (leftMatrix: 'a [,], right
         let actual =
             Option.map (fun (m: ClMatrix<'a>) -> m.ToHost processor) result
 
-        m1.Dispose processor
-        m2.Dispose processor
+        m1.Dispose()
+        m2.Dispose()
 
         match result with
-        | Some m -> m.Dispose processor
+        | Some m -> m.Dispose()
         | _ -> ()
 
         // Check result

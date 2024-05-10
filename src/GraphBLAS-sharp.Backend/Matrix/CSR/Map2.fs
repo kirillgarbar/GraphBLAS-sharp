@@ -8,6 +8,7 @@ open GraphBLAS.FSharp.Backend.Quotes
 open GraphBLAS.FSharp.Objects
 open GraphBLAS.FSharp.Objects.ClMatrix
 open GraphBLAS.FSharp.Objects.ClContextExtensions
+open GraphBLAS.FSharp.Objects.ArraysExtensions
 
 module internal Map2 =
     let private preparePositions<'a, 'b, 'c> opAdd (clContext: ClContext) workGroupSize =
@@ -46,7 +47,7 @@ module internal Map2 =
         let kernel =
             clContext.Compile <| preparePositions opAdd
 
-        fun (processor: DeviceCommandQueue<_>) rowCount columnCount (leftValues: ClArray<'a>) (leftRows: ClArray<int>) (leftColumns: ClArray<int>) (rightValues: ClArray<'b>) (rightRows: ClArray<int>) (rightColumns: ClArray<int>) ->
+        fun (processor: RawCommandQueue) rowCount columnCount (leftValues: ClArray<'a>) (leftRows: ClArray<int>) (leftColumns: ClArray<int>) (rightValues: ClArray<'b>) (rightRows: ClArray<int>) (rightColumns: ClArray<int>) ->
 
             let (resultLength: int) = columnCount * rowCount
 
@@ -67,26 +68,22 @@ module internal Map2 =
 
             let kernel = kernel.GetKernel()
 
-            processor.Post(
-                Msg.MsgSetArguments
-                    (fun () ->
-                        kernel.KernelFunc
-                            ndRange
-                            rowCount
-                            columnCount
-                            leftValues
-                            leftRows
-                            leftColumns
-                            rightValues
-                            rightRows
-                            rightColumns
-                            resultBitmap
-                            resultValues
-                            resultRows
-                            resultColumns)
-            )
+            kernel.KernelFunc
+                ndRange
+                rowCount
+                columnCount
+                leftValues
+                leftRows
+                leftColumns
+                rightValues
+                rightRows
+                rightColumns
+                resultBitmap
+                resultValues
+                resultRows
+                resultColumns
 
-            processor.Post(Msg.CreateRunMsg<_, _> kernel)
+            processor.RunKernel kernel
 
             resultBitmap, resultValues, resultRows, resultColumns
 
@@ -105,7 +102,7 @@ module internal Map2 =
         let setPositions =
             Common.setPositions<'c> clContext workGroupSize
 
-        fun (queue: DeviceCommandQueue<_>) allocationMode (matrixLeft: ClMatrix.CSR<'a>) (matrixRight: ClMatrix.CSR<'b>) ->
+        fun (queue: RawCommandQueue) allocationMode (matrixLeft: ClMatrix.CSR<'a>) (matrixRight: ClMatrix.CSR<'b>) ->
 
             let bitmap, values, rows, columns =
                 map2
@@ -122,10 +119,10 @@ module internal Map2 =
             let resultRows, resultColumns, resultValues, _ =
                 setPositions queue allocationMode rows columns values bitmap
 
-            queue.Post(Msg.CreateFreeMsg<_>(bitmap))
-            queue.Post(Msg.CreateFreeMsg<_>(values))
-            queue.Post(Msg.CreateFreeMsg<_>(rows))
-            queue.Post(Msg.CreateFreeMsg<_>(columns))
+            bitmap.Free()
+            values.Free()
+            rows.Free()
+            columns.Free()
 
             { Context = clContext
               RowCount = matrixLeft.RowCount
@@ -166,7 +163,7 @@ module internal Map2 =
 
             let kernel = clContext.Compile(preparePositions)
 
-            fun (processor: DeviceCommandQueue<_>) (allColumns: ClArray<int>) (leftValues: ClArray<'a>) (rightValues: ClArray<'b>) (isEndOfRow: ClArray<int>) (isLeft: ClArray<int>) ->
+            fun (processor: RawCommandQueue) (allColumns: ClArray<int>) (leftValues: ClArray<'a>) (rightValues: ClArray<'b>) (isEndOfRow: ClArray<int>) (isLeft: ClArray<int>) ->
                 let length = leftValues.Length
 
                 let ndRange =
@@ -180,22 +177,18 @@ module internal Map2 =
 
                 let kernel = kernel.GetKernel()
 
-                processor.Post(
-                    Msg.MsgSetArguments
-                        (fun () ->
-                            kernel.KernelFunc
-                                ndRange
-                                length
-                                allColumns
-                                leftValues
-                                rightValues
-                                allValues
-                                rowPositions
-                                isEndOfRow
-                                isLeft)
-                )
+                kernel.KernelFunc
+                    ndRange
+                    length
+                    allColumns
+                    leftValues
+                    rightValues
+                    allValues
+                    rowPositions
+                    isEndOfRow
+                    isLeft
 
-                processor.Post(Msg.CreateRunMsg<_, _>(kernel))
+                processor.RunKernel kernel
                 rowPositions, allValues
 
         let run<'a, 'b, 'c when 'a: struct and 'b: struct and 'c: struct and 'c: equality>
@@ -212,7 +205,7 @@ module internal Map2 =
             let setPositions =
                 Common.setPositions<'c> clContext workGroupSize
 
-            fun (queue: DeviceCommandQueue<_>) allocationMode (matrixLeft: ClMatrix.CSR<'a>) (matrixRight: ClMatrix.CSR<'b>) ->
+            fun (queue: RawCommandQueue) allocationMode (matrixLeft: ClMatrix.CSR<'a>) (matrixRight: ClMatrix.CSR<'b>) ->
 
                 let allRows, allColumns, leftMergedValues, rightMergedValues, isRowEnd, isLeft =
                     merge queue matrixLeft matrixRight
@@ -220,18 +213,18 @@ module internal Map2 =
                 let positions, allValues =
                     preparePositions queue allColumns leftMergedValues rightMergedValues isRowEnd isLeft
 
-                queue.Post(Msg.CreateFreeMsg<_>(leftMergedValues))
-                queue.Post(Msg.CreateFreeMsg<_>(rightMergedValues))
+                leftMergedValues.Free()
+                rightMergedValues.Free()
 
                 let resultRows, resultColumns, resultValues, _ =
                     setPositions queue allocationMode allRows allColumns allValues positions
 
-                queue.Post(Msg.CreateFreeMsg<_>(allRows))
-                queue.Post(Msg.CreateFreeMsg<_>(isLeft))
-                queue.Post(Msg.CreateFreeMsg<_>(isRowEnd))
-                queue.Post(Msg.CreateFreeMsg<_>(positions))
-                queue.Post(Msg.CreateFreeMsg<_>(allColumns))
-                queue.Post(Msg.CreateFreeMsg<_>(allValues))
+                allRows.Free()
+                isLeft.Free()
+                isRowEnd.Free()
+                positions.Free()
+                allColumns.Free()
+                allValues.Free()
 
                 { Context = clContext
                   RowCount = matrixLeft.RowCount

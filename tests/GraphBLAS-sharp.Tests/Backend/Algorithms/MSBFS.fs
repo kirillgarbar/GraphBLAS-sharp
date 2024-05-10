@@ -51,7 +51,7 @@ let makeLevelsTest context queue bfs (matrix: int [,]) =
         let actual: ClMatrix<int> = bfs queue matrixDevice source
         let actual = actual.ToHostAndFree queue
 
-        matrixDevice.Dispose queue
+        matrixDevice.Dispose()
 
         match actual, expected with
         | Matrix.COO a, Matrix.COO e -> Utils.compareCOOMatrix (=) a e
@@ -103,7 +103,7 @@ let makeParentsTest context queue bfs (matrix: int [,]) =
         let actual: ClMatrix<int> = bfs queue matrixDevice source
         let actual = actual.ToHostAndFree queue
 
-        matrixDevice.Dispose queue
+        matrixDevice.Dispose()
 
         match actual, expected with
         | Matrix.COO a, Matrix.COO e -> Utils.compareCOOMatrix (=) a e

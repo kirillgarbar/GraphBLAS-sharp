@@ -89,8 +89,8 @@ let makeTestRegular context q transposeFun hostTranspose isEqual zero case (arra
                 let m = mtx.ToDevice context
                 let (mT: ClMatrix<'a>) = transposeFun q HostInterop m
                 let res = mT.ToHost q
-                m.Dispose q
-                mT.Dispose q
+                m.Dispose()
+                mT.Dispose()
                 res
 
             logger.debug (

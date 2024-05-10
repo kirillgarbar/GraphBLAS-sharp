@@ -95,7 +95,7 @@ module Bitonic =
                 $"Values for keys %A{actualRows.[i - 1]}, %A{actualCols.[i - 1]} are not the same"
 
     let testFixtures<'a when 'a: equality> =
-        Sort.Bitonic.sortKeyValuesInplace<'a> context wgSize
+        Sort.Bitonic.sortRowsColumnsValuesInplace<'a> context wgSize
         |> makeTest
         |> testPropertyWithConfig config $"Correctness on %A{typeof<'a>}"
 

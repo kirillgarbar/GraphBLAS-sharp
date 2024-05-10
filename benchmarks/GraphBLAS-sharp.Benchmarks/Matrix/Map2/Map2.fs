@@ -79,11 +79,11 @@ type Benchmarks<'matrixT, 'elem when 'matrixT :> IDeviceMemObject and 'elem : st
         this.ResultMatrix <- this.FunToBenchmark this.Processor HostInterop firstMatrix secondMatrix
 
     member this.ClearInputMatrices() =
-        firstMatrix.Dispose this.Processor
-        secondMatrix.Dispose this.Processor
+        firstMatrix.Dispose()
+        secondMatrix.Dispose()
 
     member this.ClearResult() =
-        this.ResultMatrix.Dispose this.Processor
+        this.ResultMatrix.Dispose()
 
     member this.ReadMatrices() =
         firstMatrixHost <- this.ReadMatrix <| fst this.InputMatrixReader

@@ -15,10 +15,10 @@ module Vector =
 
         let copyData = ClArray.copy clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode (vector: Sparse<'a>) ->
+        fun (processor: RawCommandQueue) allocationMode (vector: Sparse<'a>) ->
             { Context = clContext
-              Indices = copy processor allocationMode vector.Indices
-              Values = copyData processor allocationMode vector.Values
+              Indices = copy processor allocationMode vector.Indices vector.Indices.Length
+              Values = copyData processor allocationMode vector.Values vector.Values.Length
               Size = vector.Size }
 
     let copyTo (clContext: ClContext) workGroupSize =
@@ -26,7 +26,7 @@ module Vector =
 
         let copyDataTo = ClArray.copyTo clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) (source: Sparse<'a>) (destination: Sparse<'a>) ->
+        fun (processor: RawCommandQueue) (source: Sparse<'a>) (destination: Sparse<'a>) ->
             copyTo processor source.Indices destination.Indices
             copyDataTo processor source.Values destination.Values
 
@@ -59,7 +59,7 @@ module Vector =
         let create =
             ClArray.zeroCreate clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode (vector: ClVector.Sparse<'a>) ->
+        fun (processor: RawCommandQueue) allocationMode (vector: ClVector.Sparse<'a>) ->
             let resultVector =
                 create processor allocationMode vector.Size
 
@@ -68,13 +68,9 @@ module Vector =
 
             let kernel = kernel.GetKernel()
 
-            processor.Post(
-                Msg.MsgSetArguments
-                    (fun () ->
-                        kernel.KernelFunc ndRange vector.Indices.Length vector.Values vector.Indices resultVector)
-            )
+            kernel.KernelFunc ndRange vector.Indices.Length vector.Values vector.Indices resultVector
 
-            processor.Post(Msg.CreateRunMsg<_, _>(kernel))
+            processor.RunKernel(kernel)
 
             resultVector
 
@@ -83,7 +79,7 @@ module Vector =
         let reduce =
             Common.Reduce.reduce opAdd clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) (vector: ClVector.Sparse<'a>) -> reduce processor vector.Values
+        fun (processor: RawCommandQueue) (vector: ClVector.Sparse<'a>) -> reduce processor vector.Values
 
     let ofList (clContext: ClContext) allocationMode size (elements: (int * 'a) list) =
         let indices, values =

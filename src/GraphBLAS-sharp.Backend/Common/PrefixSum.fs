@@ -25,7 +25,7 @@ module PrefixSum =
 
         let program = clContext.Compile(update)
 
-        fun (processor: DeviceCommandQueue<_>) (inputArray: ClArray<'a>) (inputArrayLength: int) (vertices: ClArray<'a>) (bunchLength: int) (mirror: bool) ->
+        fun (processor: RawCommandQueue) (inputArray: ClArray<'a>) (inputArrayLength: int) (vertices: ClArray<'a>) (bunchLength: int) (mirror: bool) ->
 
             let kernel = program.GetKernel()
 
@@ -34,13 +34,10 @@ module PrefixSum =
 
             let mirror = clContext.CreateClCell mirror
 
-            processor.Post(
-                Msg.MsgSetArguments
-                    (fun () -> kernel.KernelFunc ndRange inputArrayLength bunchLength inputArray vertices mirror)
-            )
+            kernel.KernelFunc ndRange inputArrayLength bunchLength inputArray vertices mirror
 
-            processor.Post(Msg.CreateRunMsg<_, _> kernel)
-            mirror.Free processor
+            processor.RunKernel kernel
+            mirror.Free()
 
     let private scanGeneral
         beforeLocalSumClear
@@ -93,7 +90,7 @@ module PrefixSum =
 
         let program = clContext.Compile(scan)
 
-        fun (processor: DeviceCommandQueue<_>) (inputArray: ClArray<'a>) (inputArrayLength: int) (vertices: ClArray<'a>) (verticesLength: int) (totalSum: ClCell<'a>) (zero: 'a) (mirror: bool) ->
+        fun (processor: RawCommandQueue) (inputArray: ClArray<'a>) (inputArrayLength: int) (vertices: ClArray<'a>) (verticesLength: int) (totalSum: ClCell<'a>) (zero: 'a) (mirror: bool) ->
 
             // TODO: передавать zero как константу
             let zero = clContext.CreateClCell(zero)
@@ -105,24 +102,12 @@ module PrefixSum =
 
             let mirror = clContext.CreateClCell mirror
 
-            processor.Post(
-                Msg.MsgSetArguments
-                    (fun () ->
-                        kernel.KernelFunc
-                            ndRange
-                            inputArrayLength
-                            verticesLength
-                            inputArray
-                            vertices
-                            totalSum
-                            zero
-                            mirror)
-            )
+            kernel.KernelFunc ndRange inputArrayLength verticesLength inputArray vertices totalSum zero mirror
 
-            processor.Post(Msg.CreateRunMsg<_, _> kernel)
+            processor.RunKernel kernel
 
-            zero.Free processor
-            mirror.Free processor
+            zero.Free()
+            mirror.Free()
 
     let private scanExclusive<'a when 'a: struct> =
         scanGeneral
@@ -153,9 +138,7 @@ module PrefixSum =
 
         let update = update opAdd clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) (inputArray: ClArray<'a>) (zero: 'a) ->
-
-            failwith "AAAAAAAAAAAAAAAAAA"
+        fun (processor: RawCommandQueue) (inputArray: ClArray<'a>) (zero: 'a) ->
 
             let firstVertices =
                 clContext.CreateClArray<'a>(
@@ -197,8 +180,8 @@ module PrefixSum =
                 verticesArrays <- swap verticesArrays
                 verticesLength <- (verticesLength - 1) / workGroupSize + 1
 
-            firstVertices.Free processor
-            secondVertices.Free processor
+            firstVertices.Free()
+            secondVertices.Free()
 
             totalSum
 
@@ -231,7 +214,7 @@ module PrefixSum =
         let scan =
             runExcludeInPlace <@ (+) @> clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) (inputArray: ClArray<int>) ->
+        fun (processor: RawCommandQueue) (inputArray: ClArray<int>) ->
 
             scan processor inputArray 0
 
@@ -256,7 +239,7 @@ module PrefixSum =
         let scan =
             runIncludeInPlace <@ (+) @> clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) (inputArray: ClArray<int>) ->
+        fun (processor: RawCommandQueue) (inputArray: ClArray<int>) ->
 
             scan processor inputArray 0
 
@@ -288,19 +271,16 @@ module PrefixSum =
 
             let kernel = clContext.Compile kernel
 
-            fun (processor: DeviceCommandQueue<_>) uniqueKeysCount (values: ClArray<'a>) (keys: ClArray<int>) (offsets: ClArray<int>) ->
+            fun (processor: RawCommandQueue) uniqueKeysCount (values: ClArray<'a>) (keys: ClArray<int>) (offsets: ClArray<int>) ->
 
                 let kernel = kernel.GetKernel()
 
                 let ndRange =
                     Range1D.CreateValid(values.Length, workGroupSize)
 
-                processor.Post(
-                    Msg.MsgSetArguments
-                        (fun () -> kernel.KernelFunc ndRange values.Length uniqueKeysCount values keys offsets)
-                )
+                kernel.KernelFunc ndRange values.Length uniqueKeysCount values keys offsets
 
-                processor.Post(Msg.CreateRunMsg<_, _> kernel)
+                processor.RunKernel kernel
 
         /// <summary>
         /// Exclude scan by key.

@@ -16,9 +16,9 @@ module PageRank =
     type PageRankMatrix =
         | PreparedMatrix of ClMatrix<float32>
 
-        member this.Dispose(processor: RawCommandQueue) =
+        member this.Dispose() =
             match this with
-            | PreparedMatrix matrix -> matrix.Dispose processor
+            | PreparedMatrix matrix -> matrix.Dispose()
 
     let private countOutDegree (clContext: ClContext) workGroupSize =
 
@@ -111,13 +111,7 @@ module PageRank =
                 let ndRange =
                     Range1D.CreateValid(matrix.RowCount * workGroupSize, workGroupSize)
 
-                kernel.KernelFunc
-                    ndRange
-                    matrix.RowCount
-                    matrix.RowPointers
-                    matrix.Values
-                    outDegree
-                    resultValues
+                kernel.KernelFunc ndRange matrix.RowCount matrix.RowPointers matrix.Values outDegree resultValues
 
                 queue.RunKernel(kernel)
 

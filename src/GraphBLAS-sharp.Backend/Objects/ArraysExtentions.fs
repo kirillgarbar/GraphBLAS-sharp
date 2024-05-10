@@ -4,21 +4,20 @@ open Brahma.FSharp
 
 module ArraysExtensions =
     type ClArray<'a> with
-        member this.FreeAndWait(q: DeviceCommandQueue<Msg>) =
-            q.Post(Msg.CreateFreeMsg this)
+        member this.FreeAndWait(q: RawCommandQueue) =
+            this.Dispose()
             q.Synchronize()
 
-        member this.ToHost(q: DeviceCommandQueue<Msg>) =
+        member this.ToHost(q: RawCommandQueue) =
             let dst = Array.zeroCreate this.Length
-            q.Post(Msg.CreateToHostMsg(this, dst))
-            q.Synchronize()
+            q.ToHost(this, dst, true)
             dst
 
-        member this.Free(q: DeviceCommandQueue<_>) = q.Post <| Msg.CreateFreeMsg this
+        member this.Free() = this.Dispose()
 
-        member this.ToHostAndFree(q: DeviceCommandQueue<_>) =
+        member this.ToHostAndFree(q: RawCommandQueue) =
             let result = this.ToHost q
-            this.Free q
+            this.Free()
 
             result
 

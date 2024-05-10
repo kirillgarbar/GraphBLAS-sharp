@@ -3,4 +3,4 @@
 open Brahma.FSharp
 
 type IDeviceMemObject =
-    abstract Dispose : DeviceCommandQueue<Msg> -> unit
+    abstract Dispose : unit -> unit

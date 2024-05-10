@@ -5,6 +5,7 @@ open Microsoft.FSharp.Quotations
 open GraphBLAS.FSharp.Backend.Common
 open GraphBLAS.FSharp.Objects
 open GraphBLAS.FSharp.Objects.ClContextExtensions
+open GraphBLAS.FSharp.Objects.ArraysExtensions
 
 module internal SpMV =
     let runTo
@@ -97,7 +98,7 @@ module internal SpMV =
         let multiplyValues = clContext.Compile multiplyValues
         let reduceValuesByRows = clContext.Compile reduceValuesByRows
 
-        fun (queue: DeviceCommandQueue<_>) (matrix: ClMatrix.CSR<'a>) (vector: ClArray<'b option>) (result: ClArray<'c option>) ->
+        fun (queue: RawCommandQueue) (matrix: ClMatrix.CSR<'a>) (vector: ClArray<'b option>) (result: ClArray<'c option>) ->
 
             let matrixLength = matrix.Values.Length
 
@@ -112,36 +113,17 @@ module internal SpMV =
 
             let multiplyValues = multiplyValues.GetKernel()
 
-            queue.Post(
-                Msg.MsgSetArguments
-                    (fun () ->
-                        multiplyValues.KernelFunc
-                            ndRange1
-                            matrixLength
-                            matrix.Columns
-                            matrix.Values
-                            vector
-                            intermediateArray)
-            )
+            multiplyValues.KernelFunc ndRange1 matrixLength matrix.Columns matrix.Values vector intermediateArray
 
-            queue.Post(Msg.CreateRunMsg<_, _>(multiplyValues))
+            queue.RunKernel multiplyValues
 
             let reduceValuesByRows = reduceValuesByRows.GetKernel()
 
-            queue.Post(
-                Msg.MsgSetArguments
-                    (fun () ->
-                        reduceValuesByRows.KernelFunc
-                            ndRange2
-                            matrix.RowCount
-                            intermediateArray
-                            matrix.RowPointers
-                            result)
-            )
+            reduceValuesByRows.KernelFunc ndRange2 matrix.RowCount intermediateArray matrix.RowPointers result
 
-            queue.Post(Msg.CreateRunMsg<_, _>(reduceValuesByRows))
+            queue.RunKernel reduceValuesByRows
 
-            queue.Post(Msg.CreateFreeMsg intermediateArray)
+            intermediateArray.Free()
 
     let run
         (add: Expr<'c option -> 'c option -> 'c option>)
@@ -151,7 +133,7 @@ module internal SpMV =
         =
         let runTo = runTo add mul clContext workGroupSize
 
-        fun (queue: DeviceCommandQueue<_>) allocationMode (matrix: ClMatrix.CSR<'a>) (vector: ClArray<'b option>) ->
+        fun (queue: RawCommandQueue) allocationMode (matrix: ClMatrix.CSR<'a>) (vector: ClArray<'b option>) ->
 
             let result =
                 clContext.CreateClArrayWithSpecificAllocationMode<'c option>(allocationMode, matrix.RowCount)

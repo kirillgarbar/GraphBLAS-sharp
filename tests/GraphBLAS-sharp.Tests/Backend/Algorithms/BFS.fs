@@ -76,8 +76,8 @@ let testFixtures (testContext: TestContext) =
               let resHostSparse = resSparse.ToHost queue
               let resHostPushPull = resPushPull.ToHost queue
 
-              matrix.Dispose queue
-              matrixBool.Dispose queue
+              matrix.Dispose()
+              matrixBool.Dispose()
               res.Dispose()
               resSparse.Dispose()
               resPushPull.Dispose()

@@ -22,7 +22,7 @@ module Vector =
     let create (clContext: ClContext) workGroupSize =
         let create = ClArray.create clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode size format value ->
+        fun (processor: RawCommandQueue) allocationMode size format value ->
             match format with
             | Sparse -> failwith "Attempting to create full sparse vector"
             | Dense ->
@@ -37,8 +37,7 @@ module Vector =
     let zeroCreate (clContext: ClContext) workGroupSize =
         let create = create clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode size format ->
-            create processor allocationMode size format None
+        fun (processor: RawCommandQueue) allocationMode size format -> create processor allocationMode size format None
 
     /// <summary>
     /// Builds vector of given format with fixed size and fills it with the values from the given list.
@@ -55,7 +54,7 @@ module Vector =
         let map =
             Common.Map.map <@ Some @> clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode format size (elements: (int * 'a) list) ->
+        fun (processor: RawCommandQueue) allocationMode format size (elements: (int * 'a) list) ->
             match format with
             | Sparse ->
                 let indices, values =
@@ -84,9 +83,9 @@ module Vector =
 
                 scatter processor indices mappedValues result
 
-                processor.Post(Msg.CreateFreeMsg(mappedValues))
-                processor.Post(Msg.CreateFreeMsg(indices))
-                processor.Post(Msg.CreateFreeMsg(values))
+                mappedValues.Dispose()
+                indices.Dispose()
+                values.Dispose()
 
                 ClVector.Dense result
 
@@ -102,14 +101,14 @@ module Vector =
 
         let copyOptionData = ClArray.copy clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode (vector: ClVector<'a>) ->
+        fun (processor: RawCommandQueue) allocationMode (vector: ClVector<'a>) ->
             match vector with
             | ClVector.Sparse vector ->
                 ClVector.Sparse
                 <| sparseCopy processor allocationMode vector
             | ClVector.Dense vector ->
                 ClVector.Dense
-                <| copyOptionData processor allocationMode vector
+                <| copyOptionData processor allocationMode vector vector.Length
 
     /// <summary>
     /// Sparsifies the given vector if it is in a dense format.
@@ -123,7 +122,7 @@ module Vector =
 
         let copy = copy clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode (vector: ClVector<'a>) ->
+        fun (processor: RawCommandQueue) allocationMode (vector: ClVector<'a>) ->
             match vector with
             | ClVector.Dense vector ->
                 ClVector.Sparse
@@ -142,11 +141,11 @@ module Vector =
 
         let copy = ClArray.copy clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode (vector: ClVector<'a>) ->
+        fun (processor: RawCommandQueue) allocationMode (vector: ClVector<'a>) ->
             match vector with
             | ClVector.Dense vector ->
                 ClVector.Dense
-                <| copy processor allocationMode vector
+                <| copy processor allocationMode vector vector.Length
             | ClVector.Sparse vector ->
                 ClVector.Dense
                 <| toDense processor allocationMode vector
@@ -159,7 +158,7 @@ module Vector =
         let denseFillVector =
             Dense.Vector.assignByMask op clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) allocationMode (vector: ClVector<'a>) (mask: ClVector<'b>) (value: 'a) ->
+        fun (processor: RawCommandQueue) allocationMode (vector: ClVector<'a>) (mask: ClVector<'b>) (value: 'a) ->
             match vector, mask with
             | ClVector.Sparse vector, ClVector.Sparse mask ->
                 ClVector.Sparse
@@ -199,7 +198,7 @@ module Vector =
         let assignBySparse =
             Dense.Vector.assignBySparseMaskInPlace op clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) (vector: ClVector<'a>) (mask: ClVector<'b>) (value: 'a) ->
+        fun (processor: RawCommandQueue) (vector: ClVector<'a>) (mask: ClVector<'b>) (value: 'a) ->
             match vector, mask with
             | ClVector.Dense vector, ClVector.Dense mask -> assignByDense processor vector mask value vector
             | ClVector.Dense vector, ClVector.Sparse mask -> assignBySparse processor vector mask value vector
@@ -229,7 +228,7 @@ module Vector =
         let map2Dense =
             Dense.Vector.map2InPlace map clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) (leftVector: ClVector<'a>) (rightVector: ClVector<'b>) ->
+        fun (processor: RawCommandQueue) (leftVector: ClVector<'a>) (rightVector: ClVector<'b>) ->
             match leftVector, rightVector with
             | ClVector.Dense left, ClVector.Dense right -> map2Dense processor left right left
             | _ -> failwith "Unsupported vector format"
@@ -248,7 +247,7 @@ module Vector =
         let map2Dense =
             Dense.Vector.map2InPlace map clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) (leftVector: ClVector<'a>) (rightVector: ClVector<'b>) (resultVector: ClVector<'c>) ->
+        fun (processor: RawCommandQueue) (leftVector: ClVector<'a>) (rightVector: ClVector<'b>) (resultVector: ClVector<'c>) ->
             match leftVector, rightVector, resultVector with
             | ClVector.Dense left, ClVector.Dense right, ClVector.Dense result -> map2Dense processor left right result
             | _ -> failwith "Unsupported vector format"
@@ -267,7 +266,7 @@ module Vector =
         let map2Dense =
             Dense.Vector.map2 map clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) allocationFlag (leftVector: ClVector<'a>) (rightVector: ClVector<'b>) ->
+        fun (processor: RawCommandQueue) allocationFlag (leftVector: ClVector<'a>) (rightVector: ClVector<'b>) ->
             match leftVector, rightVector with
             | ClVector.Dense left, ClVector.Dense right -> map2Dense processor allocationFlag left right
             | _ -> failwith "Unsupported vector format"
@@ -289,7 +288,7 @@ module Vector =
         let map2SparseDense =
             Sparse.Map2.runSparseDense map clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) allocationFlag (leftVector: ClVector<'a>) (rightVector: ClVector<'b>) ->
+        fun (processor: RawCommandQueue) allocationFlag (leftVector: ClVector<'a>) (rightVector: ClVector<'b>) ->
             match leftVector, rightVector with
             | ClVector.Sparse left, ClVector.Sparse right ->
                 Option.map ClVector.Sparse (map2Sparse processor allocationFlag left right)
@@ -308,7 +307,7 @@ module Vector =
         let existsDense =
             ClArray.exists predicate clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) (vector: ClVector<'a>) ->
+        fun (processor: RawCommandQueue) (vector: ClVector<'a>) ->
             match vector with
             | ClVector.Dense vector -> existsDense processor vector
             | _ -> failwith "Unsupported format"
@@ -332,7 +331,7 @@ module Vector =
         let denseReduce =
             Dense.Vector.reduce opAdd clContext workGroupSize
 
-        fun (processor: DeviceCommandQueue<_>) (vector: ClVector<'a>) ->
+        fun (processor: RawCommandQueue) (vector: ClVector<'a>) ->
             match vector with
             | ClVector.Sparse vector -> sparseReduce processor vector
             | ClVector.Dense vector -> denseReduce processor vector

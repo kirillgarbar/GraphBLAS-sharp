@@ -68,10 +68,10 @@ type Benchmarks(
         this.Result <- this.FunToBenchmark this.Processor matrixPrepared Constants.PageRank.accuracy
 
     member this.ClearInputMatrix() =
-        matrix.Dispose this.Processor
+        matrix.Dispose()
 
     member this.ClearPreparedMatrix() =
-        matrixPrepared.Dispose this.Processor
+        matrixPrepared.Dispose()
 
     member this.ClearResult() = this.Result.Dispose()
 

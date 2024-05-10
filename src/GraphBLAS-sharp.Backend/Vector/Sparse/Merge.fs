@@ -119,7 +119,7 @@ module internal Merge =
 
         let kernel = clContext.Compile merge
 
-        fun (processor: DeviceCommandQueue<_>) (firstVector: ClVector.Sparse<'a>) (secondVector: ClVector.Sparse<'b>) ->
+        fun (processor: RawCommandQueue) (firstVector: ClVector.Sparse<'a>) (secondVector: ClVector.Sparse<'b>) ->
 
             let firstSide = firstVector.Indices.Length
 
@@ -144,24 +144,20 @@ module internal Merge =
 
             let kernel = kernel.GetKernel()
 
-            processor.Post(
-                Msg.MsgSetArguments
-                    (fun () ->
-                        kernel.KernelFunc
-                            ndRange
-                            firstSide
-                            secondSide
-                            sumOfSides
-                            firstVector.Indices
-                            firstVector.Values
-                            secondVector.Indices
-                            secondVector.Values
-                            allIndices
-                            firstValues
-                            secondValues
-                            isLeftBitmap)
-            )
+            kernel.KernelFunc
+                ndRange
+                firstSide
+                secondSide
+                sumOfSides
+                firstVector.Indices
+                firstVector.Values
+                secondVector.Indices
+                secondVector.Values
+                allIndices
+                firstValues
+                secondValues
+                isLeftBitmap
 
-            processor.Post(Msg.CreateRunMsg<_, _>(kernel))
+            processor.RunKernel kernel
 
             allIndices, firstValues, secondValues, isLeftBitmap

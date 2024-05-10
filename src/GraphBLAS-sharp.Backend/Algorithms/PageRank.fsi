@@ -7,7 +7,7 @@ open GraphBLAS.FSharp.Objects
 module PageRank =
     [<Sealed>]
     type PageRankMatrix =
-        member Dispose : RawCommandQueue -> unit
+        member Dispose : unit -> unit
 
     val internal prepareMatrix : ClContext -> int -> (RawCommandQueue -> ClMatrix<float32> -> PageRankMatrix)
 

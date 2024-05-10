@@ -161,7 +161,7 @@ module Merge =
 
         let kernel = clContext.Compile(merge)
 
-        fun (processor: DeviceCommandQueue<_>) (leftMatrix: ClMatrix.CSR<'a>) (rightMatrix: ClMatrix.CSR<'b>) ->
+        fun (processor: RawCommandQueue) (leftMatrix: ClMatrix.CSR<'a>) (rightMatrix: ClMatrix.CSR<'b>) ->
 
             let firstLength = leftMatrix.Columns.Length
             let secondLength = rightMatrix.Columns.Length
@@ -194,25 +194,21 @@ module Merge =
 
             let kernel = kernel.GetKernel()
 
-            processor.Post(
-                Msg.MsgSetArguments
-                    (fun () ->
-                        kernel.KernelFunc
-                            ndRange
-                            leftMatrix.RowPointers
-                            leftMatrix.Columns
-                            leftMatrix.Values
-                            rightMatrix.RowPointers
-                            rightMatrix.Columns
-                            rightMatrix.Values
-                            allRows
-                            allColumns
-                            leftMergedValues
-                            rightMergedValues
-                            isEndOfRow
-                            isLeft)
-            )
+            kernel.KernelFunc
+                ndRange
+                leftMatrix.RowPointers
+                leftMatrix.Columns
+                leftMatrix.Values
+                rightMatrix.RowPointers
+                rightMatrix.Columns
+                rightMatrix.Values
+                allRows
+                allColumns
+                leftMergedValues
+                rightMergedValues
+                isEndOfRow
+                isLeft
 
-            processor.Post(Msg.CreateRunMsg<_, _>(kernel))
+            processor.RunKernel kernel
 
             allRows, allColumns, leftMergedValues, rightMergedValues, isEndOfRow, isLeft
