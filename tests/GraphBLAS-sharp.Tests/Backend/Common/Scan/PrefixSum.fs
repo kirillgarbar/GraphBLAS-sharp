@@ -29,7 +29,7 @@ let makeTest plus zero isEqual scan (array: 'a []) =
 
         let actual, actualSum =
             let clArray = context.CreateClArray array
-            let (total: ClCell<_>) = scan q clArray zero
+            let (total: ClCell<_>) = scan q clArray
 
             let actual = clArray.ToHostAndFree q
             let actualSum = total.ToHostAndFree q
@@ -45,7 +45,7 @@ let makeTest plus zero isEqual scan (array: 'a []) =
             |> Array.mapFold
                 (fun s t ->
                     let a = plus s t
-                    a, a)
+                    s, a)
                 zero
 
         logger.debug (
@@ -60,13 +60,11 @@ let makeTest plus zero isEqual scan (array: 'a []) =
         |> Tests.Utils.compareArrays isEqual actual expected
 
 let testFixtures plus plusQ zero isEqual name =
-    Common.PrefixSum.runIncludeInPlace plusQ context wgSize
+    Common.PrefixSum.runExcludeInPlace plusQ zero context wgSize
     |> makeTest plus zero isEqual
     |> testPropertyWithConfig config $"Correctness on %s{name}"
 
 let tests =
-    //q.Error.Add(fun e -> failwithf "%A" e)
-
     [ testFixtures (+) <@ (+) @> 0 (=) "int add"
       testFixtures (+) <@ (+) @> 0uy (=) "byte add"
       testFixtures max <@ max @> 0 (=) "int max"

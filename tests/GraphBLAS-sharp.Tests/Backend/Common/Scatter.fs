@@ -33,8 +33,8 @@ let makeTest<'a when 'a: equality> hostScatter scatter (array: (int * 'a) []) (r
 
             scatter q clPositions clValues clResult
 
-            clValues.Free q
-            clPositions.Free q
+            clValues.Free()
+            clPositions.Free()
             clResult.ToHostAndFree q
 
         $"Arrays should be equal."
@@ -81,7 +81,7 @@ let makeTestInit<'a when 'a: equality> hostScatter valueMap scatter (positions: 
 
         scatter q clPositions clResult
 
-        clPositions.Free q
+        clPositions.Free()
         let actual = clResult.ToHostAndFree q
 
         $"Arrays should be equal."

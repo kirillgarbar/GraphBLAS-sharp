@@ -402,7 +402,7 @@ module HostPrimitives =
 module Context =
     type TestContext =
         { ClContext: ClContext
-          Queue: DeviceCommandQueue<Msg> }
+          Queue: RawCommandQueue }
 
     let availableContexts (platformRegex: string) =
         let mutable e = ErrorCode.Unknown
@@ -465,7 +465,10 @@ module Context =
                 let translator = FSQuotationToOpenCLTranslator device
 
                 let context = ClContext(device, translator)
-                let queue = context.QueueProvider.CreateQueue()
+
+                let queue =
+                    RawCommandQueue(context.ClDevice.Device, context.Context, context.Translator)
+
 
                 { ClContext = context; Queue = queue })
 
@@ -475,7 +478,8 @@ module Context =
         let context =
             ClContext(device, FSQuotationToOpenCLTranslator device)
 
-        let queue = context.QueueProvider.CreateQueue()
+        let queue =
+            RawCommandQueue(context.ClDevice.Device, context.Context, context.Translator)
 
         { ClContext = context; Queue = queue }
 

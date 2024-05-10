@@ -36,8 +36,8 @@ let checkResult
 
 let correctnessGenericTest<'a when 'a: struct>
     (isEqual: 'a -> 'a -> bool)
-    (ofList: DeviceCommandQueue<_> -> AllocationFlag -> VectorFormat -> int -> (int * 'a) list -> ClVector<'a>)
-    (toCoo: DeviceCommandQueue<_> -> AllocationFlag -> ClVector<'a> -> ClVector<'a>)
+    (ofList: RawCommandQueue -> AllocationFlag -> VectorFormat -> int -> (int * 'a) list -> ClVector<'a>)
+    (toCoo: RawCommandQueue -> AllocationFlag -> ClVector<'a> -> ClVector<'a>)
     (case: OperationCase<VectorFormat>)
     (elements: (int * 'a) [])
     (sizeDelta: int)
@@ -65,8 +65,8 @@ let correctnessGenericTest<'a when 'a: struct>
 
         let actual = clCooActual.ToHost q
 
-        clActual.Dispose q
-        clCooActual.Dispose q
+        clActual.Dispose()
+        clCooActual.Dispose()
 
         checkResult isEqual indices values actual actualSize
 

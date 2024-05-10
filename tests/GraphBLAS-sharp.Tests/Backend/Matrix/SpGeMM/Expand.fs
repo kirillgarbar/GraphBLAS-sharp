@@ -134,7 +134,7 @@ let makeExpandTest isEqual zero testFun (leftArray: 'a [,], rightArray: 'a [,]) 
 
             clLeftMatrix.Dispose processor
             clRightMatrix.Dispose processor
-            clSegmentPointers.Free processor
+            clSegmentPointers.Free()
 
             let actualLeftValues =
                 clActualLeftValues.ToHostAndFree processor

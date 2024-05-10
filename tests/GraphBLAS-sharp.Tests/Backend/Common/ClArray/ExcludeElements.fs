@@ -29,8 +29,8 @@ let makeTest<'a> isEqual (zero: 'a) testFun ((array, bitmap): 'a array * int arr
             actual
             |> Option.map (fun a -> a.ToHostAndFree processor)
 
-        arrayCl.Free processor
-        bitmapCl.Free processor
+        arrayCl.Free()
+        bitmapCl.Free()
 
         let expected =
             (bitmap, array)

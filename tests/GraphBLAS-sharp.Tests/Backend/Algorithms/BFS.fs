@@ -78,9 +78,9 @@ let testFixtures (testContext: TestContext) =
 
               matrix.Dispose queue
               matrixBool.Dispose queue
-              res.Dispose queue
-              resSparse.Dispose queue
-              resPushPull.Dispose queue
+              res.Dispose()
+              resSparse.Dispose()
+              resPushPull.Dispose()
 
               match resHost, resHostSparse, resHostPushPull with
               | Vector.Dense resHost, Vector.Dense resHostSparse, Vector.Dense resHostPushPull ->

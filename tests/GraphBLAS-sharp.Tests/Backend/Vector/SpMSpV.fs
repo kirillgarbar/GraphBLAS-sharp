@@ -60,7 +60,7 @@ let correctnessGenericTest
     some
     sumOp
     mulOp
-    (spMV: DeviceCommandQueue<_> -> ClMatrix<'a> -> ClVector<'a> -> ClVector<'a> option)
+    (spMV: RawCommandQueue -> ClMatrix<'a> -> ClVector<'a> -> ClVector<'a> option)
     (isEqual: 'a -> 'a -> bool)
     q
     (testContext: TestContext)
@@ -87,10 +87,10 @@ let correctnessGenericTest
                 match spMV testContext.Queue m v with
                 | Some (ClVector.Sparse res) ->
                     m.Dispose q
-                    v.Dispose q
+                    v.Dispose()
                     let hostResIndices = res.Indices.ToHost q
                     let hostResValues = res.Values.ToHost q
-                    res.Dispose q
+                    res.Dispose()
 
                     checkResult sumOp mulOp zero matrix vector hostResIndices hostResValues
                 | _ -> failwith "Result should not be empty while standard operations are tested"

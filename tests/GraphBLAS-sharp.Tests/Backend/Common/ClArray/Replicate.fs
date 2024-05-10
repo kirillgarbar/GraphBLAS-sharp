@@ -27,7 +27,7 @@ let makeTest<'a when 'a: equality> replicateFun (array: array<'a>) i =
             (replicateFun q HostInterop clArray i: ClArray<'a>)
                 .ToHostAndFree q
 
-        clArray.Free q
+        clArray.Free()
 
         logger.debug (
             eventX $"Actual is {actual}"

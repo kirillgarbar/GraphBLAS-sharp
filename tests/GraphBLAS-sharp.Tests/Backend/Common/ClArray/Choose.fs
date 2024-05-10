@@ -73,8 +73,8 @@ let makeTest2 testContext isEqual opMap testFun (firstArray: 'a [], secondArray:
                 testFun processor HostInterop clFirstArray clSecondArray
 
             let actual = clActual.ToHostAndFree processor
-            clFirstArray.Free processor
-            clSecondArray.Free processor
+            clFirstArray.Free()
+            clSecondArray.Free()
 
             "Results must be the same"
             |> Utils.compareArrays isEqual actual expected

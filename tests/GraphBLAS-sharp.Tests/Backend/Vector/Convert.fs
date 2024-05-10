@@ -21,7 +21,7 @@ let wgSize = Constants.Common.defaultWorkGroupSize
 
 let makeTest
     formatFrom
-    (convertFun: DeviceCommandQueue<_> -> AllocationFlag -> ClVector<'a> -> ClVector<'a>)
+    (convertFun: RawCommandQueue -> AllocationFlag -> ClVector<'a> -> ClVector<'a>)
     isZero
     case
     (array: 'a [])
@@ -41,8 +41,8 @@ let makeTest
 
             let res = convertedVector.ToHost q
 
-            clVector.Dispose q
-            convertedVector.Dispose q
+            clVector.Dispose()
+            convertedVector.Dispose()
 
             res
 

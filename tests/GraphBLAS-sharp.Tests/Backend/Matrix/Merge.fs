@@ -190,7 +190,7 @@ let makeTestCSR isEqual zero testFun (leftArray: 'a [,], rightArray: 'a [,]) =
 
         let leftValues = clLeftValues.ToHostAndFree processor
         let rightValues = clRightValues.ToHostAndFree processor
-        clIsEndOfRow.Free processor
+        clIsEndOfRow.Free()
         let isLeft = clIsLeft.ToHostAndFree processor
 
         let actualValues =

@@ -45,8 +45,8 @@ let correctnessGenericTest
     isEqual
     zero
     op
-    (addFun: DeviceCommandQueue<_> -> AllocationFlag -> ClVector<'a> -> ClVector<'a> -> ClVector<'a> option)
-    (toDense: DeviceCommandQueue<_> -> AllocationFlag -> ClVector<'a> -> ClVector<'a>)
+    (addFun: RawCommandQueue -> AllocationFlag -> ClVector<'a> -> ClVector<'a> -> ClVector<'a> option)
+    (toDense: RawCommandQueue -> AllocationFlag -> ClVector<'a> -> ClVector<'a>)
     case
     (leftArray: 'a [], rightArray: 'a [])
     =
@@ -78,14 +78,14 @@ let correctnessGenericTest
 
                 let actual = denseActual.ToHost q
 
-                res.Dispose q
-                denseActual.Dispose q
+                res.Dispose()
+                denseActual.Dispose()
 
                 checkResult isEqual zero op actual leftArray rightArray
             | _ -> ()
 
-            firstVector.Dispose q
-            secondVector.Dispose q
+            firstVector.Dispose()
+            secondVector.Dispose()
         with
         | ex when ex.Message = "InvalidBufferSize" -> ()
         | ex -> raise ex

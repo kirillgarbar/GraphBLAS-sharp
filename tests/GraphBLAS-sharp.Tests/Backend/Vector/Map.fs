@@ -46,8 +46,8 @@ let checkResult isEqual op zero (baseVector: 'a []) (actual: Vector<'b>) =
 let correctnessGenericTest
     zero
     op
-    (addFun: DeviceCommandQueue<_> -> AllocationFlag -> ClVector<'a> -> ClVector<'a>)
-    (toDense: DeviceCommandQueue<_> -> AllocationFlag -> ClVector<'a> -> ClVector<'a>)
+    (addFun: RawCommandQueue -> AllocationFlag -> ClVector<'a> -> ClVector<'a>)
+    (toDense: RawCommandQueue -> AllocationFlag -> ClVector<'a> -> ClVector<'a>)
     (isEqual: 'a -> 'a -> bool)
     (case: OperationCase<VectorFormat>)
     (array: 'a [])
@@ -68,14 +68,14 @@ let correctnessGenericTest
         try
             let res = addFun q HostInterop vector
 
-            vector.Dispose q
+            vector.Dispose()
 
             let denseActual = toDense q HostInterop res
 
             let actual = denseActual.ToHost q
 
-            res.Dispose q
-            denseActual.Dispose q
+            res.Dispose()
+            denseActual.Dispose()
 
             checkResult isEqual op zero array actual
         with

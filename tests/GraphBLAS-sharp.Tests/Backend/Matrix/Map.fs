@@ -52,7 +52,7 @@ let checkResult isEqual op zero (baseMtx: 'a [,]) (actual: Matrix<'a>) =
 let correctnessGenericTest
     zero
     op
-    (addFun: DeviceCommandQueue<_> -> AllocationFlag -> ClMatrix<'a> -> ClMatrix<'b>)
+    (addFun: RawCommandQueue -> AllocationFlag -> ClMatrix<'a> -> ClMatrix<'b>)
     toCOOFun
     (isEqual: 'a -> 'a -> bool)
     q

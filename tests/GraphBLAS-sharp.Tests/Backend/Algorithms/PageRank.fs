@@ -104,7 +104,7 @@ let testFixtures (testContext: TestContext) =
 
               preparedMatrix.Dispose queue
               matrix.Dispose queue
-              res.Dispose queue
+              res.Dispose()
 
               match resHost with
               | Vector.Dense resHost ->

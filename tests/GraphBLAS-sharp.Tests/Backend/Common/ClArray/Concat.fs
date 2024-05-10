@@ -26,8 +26,7 @@ let makeTest<'a> isEqual testFun (arrays: 'a [] []) =
         // release
         let actual = clActual.ToHostAndFree processor
 
-        clArrays
-        |> Seq.iter (fun array -> array.Free processor)
+        clArrays |> Seq.iter (fun array -> array.Free())
 
         let expected = Seq.concat arrays |> Seq.toArray
 

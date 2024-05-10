@@ -32,7 +32,7 @@ let makeTest plus zero sum (array: 'a []) =
             let clArray = context.CreateClArray array
             let (total: ClCell<_>) = sum q clArray
 
-            clArray.Free q
+            clArray.Free()
             total.ToHostAndFree q
 
         logger.debug (

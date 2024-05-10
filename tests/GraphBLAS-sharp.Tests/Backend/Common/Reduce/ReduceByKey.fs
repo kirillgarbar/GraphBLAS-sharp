@@ -52,8 +52,8 @@ let makeTest isEqual reduce reduceOp (arrayAndKeys: (int * 'a) []) =
         let clActualValues, clActualKeys: ClArray<'a> * ClArray<int> =
             reduce processor HostInterop resultLength clKeys clValues
 
-        clValues.Free processor
-        clKeys.Free processor
+        clValues.Free()
+        clKeys.Free()
 
         let actualValues = clActualValues.ToHostAndFree processor
         let actualKeys = clActualKeys.ToHostAndFree processor
@@ -235,9 +235,9 @@ let makeTest2D isEqual reduce reduceOp (array: (int * int * 'a) []) =
         let clActualValues, clFirstActualKeys, clSecondActualKeys: ClArray<'a> * ClArray<int> * ClArray<int> =
             reduce processor HostInterop resultLength clFirstKeys clSecondKeys clValues
 
-        clValues.Free processor
-        clFirstKeys.Free processor
-        clSecondKeys.Free processor
+        clValues.Free()
+        clFirstKeys.Free()
+        clSecondKeys.Free()
 
         let actualValues = clActualValues.ToHostAndFree processor
 

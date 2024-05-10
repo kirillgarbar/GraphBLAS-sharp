@@ -37,7 +37,7 @@ let checkResult (isEqual: 'a -> 'a -> bool) (actual: Vector<'a>) (expected: Vect
 let correctnessGenericTest<'a when 'a: struct>
     isEqual
     zero
-    (copy: DeviceCommandQueue<Brahma.FSharp.Msg> -> AllocationFlag -> ClVector<'a> -> ClVector<'a>)
+    (copy: RawCommandQueue -> AllocationFlag -> ClVector<'a> -> ClVector<'a>)
     (case: OperationCase<VectorFormat>)
     (array: 'a [])
     =
@@ -54,8 +54,8 @@ let correctnessGenericTest<'a when 'a: struct>
         let clVectorCopy = copy q HostInterop clVector
         let actual = clVectorCopy.ToHost q
 
-        clVector.Dispose q
-        clVectorCopy.Dispose q
+        clVector.Dispose()
+        clVectorCopy.Dispose()
 
         checkResult isEqual actual expected
 

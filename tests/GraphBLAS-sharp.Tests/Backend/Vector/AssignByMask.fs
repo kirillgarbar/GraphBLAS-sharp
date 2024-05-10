@@ -50,8 +50,8 @@ let checkResult isZero isComplemented (actual: Vector<'a>) (vector: 'a []) (mask
 
 let makeTest<'a when 'a: struct and 'a: equality>
     (isZero: 'a -> bool)
-    (toDense: DeviceCommandQueue<_> -> AllocationFlag -> ClVector<'a> -> ClVector<'a>)
-    (fillVector: DeviceCommandQueue<Msg> -> AllocationFlag -> ClVector<'a> -> ClVector<'a> -> 'a -> ClVector<'a>)
+    (toDense: RawCommandQueue -> AllocationFlag -> ClVector<'a> -> ClVector<'a>)
+    (fillVector: RawCommandQueue -> AllocationFlag -> ClVector<'a> -> ClVector<'a> -> 'a -> ClVector<'a>)
     isComplemented
     case
     (vector: 'a [], mask: 'a [], value: 'a)
@@ -80,10 +80,10 @@ let makeTest<'a when 'a: struct and 'a: equality>
 
             let actual = cooClActual.ToHost q
 
-            clLeftVector.Dispose q
-            clMaskVector.Dispose q
-            clActual.Dispose q
-            cooClActual.Dispose q
+            clLeftVector.Dispose()
+            clMaskVector.Dispose()
+            clActual.Dispose()
+            cooClActual.Dispose()
 
             checkResult isZero isComplemented actual vector mask value
         with

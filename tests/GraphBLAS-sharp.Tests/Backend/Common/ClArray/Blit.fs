@@ -24,7 +24,7 @@ let makeTest<'a> isEqual testFun (source: 'a [], sourceIndex, target: 'a [], tar
 
         testFun processor clSource sourceIndex clTarget targetIndex count
 
-        clSource.Free processor
+        clSource.Free()
         let actual = clTarget.ToHostAndFree processor
 
         // write to target --- target expected
