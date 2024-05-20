@@ -352,6 +352,21 @@ module Operations =
             | ClMatrix.CSR m, ClVector.Sparse v -> Option.map ClVector.Sparse (run queue m v)
             | _ -> failwith "Not implemented yet"
 
+    let rec SpMSpVMasked
+        (add: Expr<'c option -> 'c option -> 'c option>)
+        (mul: Expr<'a option -> 'b option -> 'c option>)
+        (clContext: ClContext)
+        workGroupSize
+        =
+
+        let run =
+            SpMSpV.runMaskedBool add mul clContext workGroupSize
+
+        fun (queue: RawCommandQueue) (matrix: ClMatrix<'a>) (vector: ClVector<'b>) (mask: ClVector<'d>) ->
+            match matrix, vector, mask with
+            | ClMatrix.CSR m, ClVector.Sparse v, ClVector.Dense mask -> Option.map ClVector.Sparse (run queue m v mask)
+            | _ -> failwith "Not implemented yet"
+
     /// <summary>
     /// CSR Matrix - sparse vector multiplication.
     /// </summary>

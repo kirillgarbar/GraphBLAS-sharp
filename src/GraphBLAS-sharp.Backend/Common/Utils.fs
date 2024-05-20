@@ -23,6 +23,12 @@ module internal Utils =
 
     let ceilToMultiple multiple x = ((x - 1) / multiple + 1) * multiple
 
+    let divUpClamp what by left right =
+        let d =
+            what / by + (if what % by <> 0 then 1 else 0)
+
+        min (max d left) right
+
     let getClArrayOfValueTypeSize<'a when 'a: struct> localMemorySize = localMemorySize / sizeof<'a>
 
     //Option type in C is represented as structure with additional integer field

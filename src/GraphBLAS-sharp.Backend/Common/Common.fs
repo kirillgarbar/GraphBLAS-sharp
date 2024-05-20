@@ -288,6 +288,7 @@ module Common =
         /// </code>
         /// </example>
         let standardExcludeInPlace = ScanInternal.standardExcludeInPlace
+        let standardExcludeInPlaceNoSum = ScanInternal2.standardExcludeInPlace
 
         /// <summary>
         /// Include in-place prefix sum of integer array with addition operation and start value that is equal to 0.

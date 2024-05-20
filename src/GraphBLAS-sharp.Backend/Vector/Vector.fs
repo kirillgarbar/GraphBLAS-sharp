@@ -118,7 +118,7 @@ module Vector =
     /// <param name="workGroupSize">Should be a power of 2 and greater than 1.</param>
     let toSparse (clContext: ClContext) workGroupSize =
         let toSparse =
-            Dense.Vector.toSparse clContext workGroupSize
+            Dense.Vector.toSparse2 clContext workGroupSize
 
         let copy = copy clContext workGroupSize
 
