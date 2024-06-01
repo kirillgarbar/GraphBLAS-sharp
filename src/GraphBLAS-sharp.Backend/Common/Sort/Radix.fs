@@ -92,14 +92,7 @@ module internal Radix =
 
             let kernel = kernel.GetKernel()
 
-            kernel.KernelFunc
-                ndRange
-                indices.Length
-                indices
-                clWorkGroupCount
-                shift
-                globalOffsets
-                localOffsets
+            kernel.KernelFunc ndRange indices.Length indices clWorkGroupCount shift globalOffsets localOffsets
 
             processor.RunKernel kernel
 
@@ -156,7 +149,8 @@ module internal Radix =
             if keys.Length <= 1 then
                 copy processor DeviceOnly keys keys.Length
             else
-                let firstKeys = copy processor DeviceOnly keys keys.Length 
+                let firstKeys =
+                    copy processor DeviceOnly keys keys.Length
 
                 let secondKeys =
                     clContext.CreateClArrayWithSpecificAllocationMode(DeviceOnly, keys.Length)
@@ -259,12 +253,14 @@ module internal Radix =
             if values.Length <= 1 then
                 copy processor DeviceOnly keys keys.Length, dataCopy processor DeviceOnly values values.Length
             else
-                let firstKeys = copy processor DeviceOnly keys keys.Length
+                let firstKeys =
+                    copy processor DeviceOnly keys keys.Length
 
                 let secondKeys =
                     clContext.CreateClArrayWithSpecificAllocationMode(DeviceOnly, keys.Length)
 
-                let firstValues = dataCopy processor DeviceOnly values values.Length
+                let firstValues =
+                    dataCopy processor DeviceOnly values values.Length
 
                 let secondValues =
                     clContext.CreateClArrayWithSpecificAllocationMode(DeviceOnly, values.Length)

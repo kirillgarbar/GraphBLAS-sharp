@@ -9,7 +9,7 @@ nuget YoloDev.Expecto.TestSdk 0.13.3
 nuget Microsoft.NET.Test.Sdk 16.8.0
 nuget altcover ~> 7
 
-nuget System.Collections.Immutable 8.0
+nuget System.Collections.Immutable 7.0
 nuget ExtraConstraints.Fody 1.14.0
 nuget Microsoft.Build.Framework 16.10
 nuget System.CodeDom >= 7.0
