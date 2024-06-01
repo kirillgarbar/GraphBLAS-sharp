@@ -362,7 +362,7 @@ module ClArray =
 
                 let gid = ndRange.GlobalID0
 
-                if gid < length then
+                if gid < length && not result.Value then
                     let isExist = (%predicate) vector.[gid]
 
                     if isExist then result.Value <- true @>

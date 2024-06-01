@@ -257,6 +257,7 @@ module Bitonic =
                 int (clContext.ClDevice.LocalMemSize)
                 / (sizeof<int> + sizeof<'a>)
             )
+            / 2
 
         let maxThreadsPerBlock =
             min (clContext.ClDevice.MaxWorkGroupSize) (localSize / 2)
