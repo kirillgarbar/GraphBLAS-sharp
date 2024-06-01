@@ -63,7 +63,7 @@ let makeTest plus zero isEqual scanInclude scanExclude (array: 'a []) =
             |> Array.mapFold
                 (fun s t ->
                     let a = plus s t
-                    s, a)
+                    a, a)
                 zero
 
         "Total sums for include should be equal"
