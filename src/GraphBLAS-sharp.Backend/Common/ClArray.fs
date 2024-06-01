@@ -906,14 +906,14 @@ module ClArray =
             <@ fun (ndRange: Range1D) (length: int) (array: ClArray<'a>) (count: ClCell<int>) ->
                 let gid = ndRange.GlobalID0
                 let mutable countLocal = 0
-                let gSize = ndRange.GlobalWorkSize
+                let step = ndRange.GlobalWorkSize
 
                 let mutable i = gid
 
                 while i < length do
                     let res = (%predicate) array.[i]
                     if res then countLocal <- countLocal + 1
-                    i <- i + gSize
+                    i <- i + step
 
                 atomic (+) count.Value countLocal |> ignore @>
 

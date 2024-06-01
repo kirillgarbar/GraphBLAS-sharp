@@ -142,62 +142,6 @@ module Vector =
 
     let toSparse<'a when 'a: struct> (clContext: ClContext) workGroupSize =
 
-        let scatterValues =
-            Common.Scatter.lastOccurrence clContext workGroupSize
-
-        let scatterIndices =
-            Common.Scatter.lastOccurrence clContext workGroupSize
-
-        let getBitmap =
-            Map.map (Map.option 1 0) clContext workGroupSize
-
-        let prefixSum =
-            Common.PrefixSum.standardExcludeInPlace clContext workGroupSize
-
-        let allIndices =
-            ClArray.init Map.id clContext workGroupSize
-
-        let allValues =
-            Map.map (Map.optionToValueOrZero Unchecked.defaultof<'a>) clContext workGroupSize
-
-        fun (processor: RawCommandQueue) allocationMode (vector: ClArray<'a option>) ->
-
-            let positions = getBitmap processor DeviceOnly vector
-
-            let resultLength =
-                (prefixSum processor positions)
-                    .ToHostAndFree(processor)
-
-            // compute result indices
-            let resultIndices =
-                clContext.CreateClArrayWithSpecificAllocationMode<int>(allocationMode, resultLength)
-
-            let allIndices =
-                allIndices processor DeviceOnly vector.Length
-
-            scatterIndices processor positions allIndices resultIndices
-
-            allIndices.Free()
-
-            // compute result values
-            let resultValues =
-                clContext.CreateClArrayWithSpecificAllocationMode<'a>(allocationMode, resultLength)
-
-            let allValues = allValues processor DeviceOnly vector
-
-            scatterValues processor positions allValues resultValues
-
-            allValues.Free()
-
-            positions.Free()
-
-            { Context = clContext
-              Indices = resultIndices
-              Values = resultValues
-              Size = vector.Length }
-
-    let toSparse2<'a when 'a: struct> (clContext: ClContext) workGroupSize =
-
         let kernel =
             <@ fun (ndRange: Range1D) (inputLength: int) (inputValues: ClArray<'a option>) (resultSize: ClCell<int>) (resultIndices: ClArray<int>) (resultValues: ClArray<'a>) ->
 
