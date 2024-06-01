@@ -19,15 +19,18 @@ let q = Context.defaultContext.Queue
 
 let config = Utils.defaultConfig
 
-let makeTest<'a when 'a: equality> copyFun (array: array<'a>) =
+let makeTest<'a when 'a: equality>
+    (copyFun: RawCommandQueue -> AllocationFlag -> ClArray<'a> -> int -> ClArray<'a>)
+    (array: array<'a>)
+    =
     if array.Length > 0 then
-        let clArray = context.CreateClArray array
+        let clArray: ClArray<'a> = context.CreateClArray array
 
         let actual =
-            (copyFun q HostInterop clArray: ClArray<_>)
+            (copyFun q DeviceOnly clArray clArray.Length)
                 .ToHostAndFree q
 
-        clArray.Free q
+        clArray.Free()
 
         logger.debug (
             eventX "Actual is {actual}"
@@ -43,7 +46,7 @@ let creatTest<'a when 'a: equality> =
     |> testPropertyWithConfig config $"Correctness test on random %A{typeof<'a>} arrays"
 
 let testCases =
-    q.Error.Add(fun e -> failwithf "%A" e)
+    //q.Error.Add(fun e -> failwithf "%A" e)
 
     [ creatTest<int>
       creatTest<bool>

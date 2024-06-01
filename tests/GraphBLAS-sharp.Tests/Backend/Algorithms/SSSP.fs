@@ -51,8 +51,8 @@ let testFixtures (testContext: TestContext) =
 
               let resHost = resDense.ToHost queue
 
-              matrix.Dispose queue
-              resDense.Dispose queue
+              matrix.Dispose()
+              resDense.Dispose()
 
               match resHost with
               | Vector.Dense resHost ->

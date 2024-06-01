@@ -89,8 +89,8 @@ let makeTestRegular context q transposeFun hostTranspose isEqual zero case (arra
                 let m = mtx.ToDevice context
                 let (mT: ClMatrix<'a>) = transposeFun q HostInterop m
                 let res = mT.ToHost q
-                m.Dispose q
-                mT.Dispose q
+                m.Dispose()
+                mT.Dispose()
                 res
 
             logger.debug (
@@ -125,7 +125,7 @@ let createTest<'a when 'a: equality and 'a: struct> case (zero: 'a) isEqual =
 let testFixtures case =
     let context = case.TestContext.ClContext
     let q = case.TestContext.Queue
-    q.Error.Add(fun e -> failwithf "%A" e)
+    //q.Error.Add(fun e -> failwithf "%A" e)
 
     [ createTest<int> case 0 (=)
 

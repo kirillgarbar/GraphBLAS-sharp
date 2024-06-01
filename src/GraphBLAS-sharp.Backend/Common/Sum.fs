@@ -14,7 +14,7 @@ module Reduce =
     /// </summary>
     let private runGeneral (clContext: ClContext) workGroupSize scan scanToCell =
 
-        fun (processor: MailboxProcessor<_>) (inputArray: ClArray<'a>) ->
+        fun (processor: RawCommandQueue) (inputArray: ClArray<'a>) ->
 
             let scan = scan processor
 
@@ -50,8 +50,8 @@ module Reduce =
             let result =
                 scanToCell processor fstVertices verticesLength
 
-            firstVerticesArray.Free processor
-            secondVerticesArray.Free processor
+            firstVerticesArray.Free()
+            secondVerticesArray.Free()
 
             result
 
@@ -80,17 +80,15 @@ module Reduce =
 
         let kernel = clContext.Compile(scan)
 
-        fun (processor: MailboxProcessor<_>) (valuesArray: ClArray<'a>) valuesLength (resultArray: ClArray<'a>) ->
+        fun (processor: RawCommandQueue) (valuesArray: ClArray<'a>) valuesLength (resultArray: ClArray<'a>) ->
             let ndRange =
                 Range1D.CreateValid(valuesArray.Length, workGroupSize)
 
             let kernel = kernel.GetKernel()
 
-            processor.Post(
-                Msg.MsgSetArguments(fun () -> kernel.KernelFunc ndRange valuesLength valuesArray resultArray)
-            )
+            kernel.KernelFunc ndRange valuesLength valuesArray resultArray
 
-            processor.Post(Msg.CreateRunMsg<_, _>(kernel))
+            processor.RunKernel kernel
 
     let private scanToCellSum (opAdd: Expr<'a -> 'a -> 'a>) (clContext: ClContext) workGroupSize zero =
 
@@ -117,7 +115,7 @@ module Reduce =
 
         let kernel = clContext.Compile(scan)
 
-        fun (processor: MailboxProcessor<_>) (valuesArray: ClArray<'a>) valuesLength ->
+        fun (processor: RawCommandQueue) (valuesArray: ClArray<'a>) valuesLength ->
 
             let ndRange =
                 Range1D.CreateValid(valuesArray.Length, workGroupSize)
@@ -126,9 +124,9 @@ module Reduce =
 
             let kernel = kernel.GetKernel()
 
-            processor.Post(Msg.MsgSetArguments(fun () -> kernel.KernelFunc ndRange valuesLength valuesArray resultCell))
+            kernel.KernelFunc ndRange valuesLength valuesArray resultCell
 
-            processor.Post(Msg.CreateRunMsg<_, _>(kernel))
+            processor.RunKernel kernel
 
             resultCell
 
@@ -149,7 +147,7 @@ module Reduce =
         let run =
             runGeneral clContext workGroupSize scan scanToCell
 
-        fun (processor: MailboxProcessor<_>) (array: ClArray<'a>) -> run processor array
+        fun (processor: RawCommandQueue) (array: ClArray<'a>) -> run processor array
 
     let private scanReduce<'a when 'a: struct>
         (opAdd: Expr<'a -> 'a -> 'a>)
@@ -179,18 +177,16 @@ module Reduce =
 
         let kernel = clContext.Compile(scan)
 
-        fun (processor: MailboxProcessor<_>) (valuesArray: ClArray<'a>) valuesLength (resultArray: ClArray<'a>) ->
+        fun (processor: RawCommandQueue) (valuesArray: ClArray<'a>) valuesLength (resultArray: ClArray<'a>) ->
 
             let ndRange =
                 Range1D.CreateValid(valuesArray.Length, workGroupSize)
 
             let kernel = kernel.GetKernel()
 
-            processor.Post(
-                Msg.MsgSetArguments(fun () -> kernel.KernelFunc ndRange valuesLength valuesArray resultArray)
-            )
+            kernel.KernelFunc ndRange valuesLength valuesArray resultArray
 
-            processor.Post(Msg.CreateRunMsg<_, _>(kernel))
+            processor.RunKernel kernel
 
     let private scanToCellReduce<'a when 'a: struct>
         (opAdd: Expr<'a -> 'a -> 'a>)
@@ -220,7 +216,7 @@ module Reduce =
 
         let kernel = clContext.Compile(scan)
 
-        fun (processor: MailboxProcessor<_>) (valuesArray: ClArray<'a>) valuesLength ->
+        fun (processor: RawCommandQueue) (valuesArray: ClArray<'a>) valuesLength ->
 
             let ndRange =
                 Range1D.CreateValid(valuesArray.Length, workGroupSize)
@@ -230,9 +226,9 @@ module Reduce =
 
             let kernel = kernel.GetKernel()
 
-            processor.Post(Msg.MsgSetArguments(fun () -> kernel.KernelFunc ndRange valuesLength valuesArray resultCell))
+            kernel.KernelFunc ndRange valuesLength valuesArray resultCell
 
-            processor.Post(Msg.CreateRunMsg<_, _>(kernel))
+            processor.RunKernel kernel
 
             resultCell
 
@@ -252,7 +248,7 @@ module Reduce =
         let run =
             runGeneral clContext workGroupSize scan scanToCell
 
-        fun (processor: MailboxProcessor<_>) (array: ClArray<'a>) -> run processor array
+        fun (processor: RawCommandQueue) (array: ClArray<'a>) -> run processor array
 
     /// <summary>
     /// Reduction of an array of values by an array of keys.
@@ -295,7 +291,7 @@ module Reduce =
 
             let kernel = clContext.Compile kernel
 
-            fun (processor: MailboxProcessor<_>) allocationMode (resultLength: int) (keys: ClArray<int>) (values: ClArray<'a>) ->
+            fun (processor: RawCommandQueue) allocationMode (resultLength: int) (keys: ClArray<int>) (values: ClArray<'a>) ->
 
                 let reducedValues =
                     clContext.CreateClArrayWithSpecificAllocationMode(allocationMode, resultLength)
@@ -308,12 +304,9 @@ module Reduce =
 
                 let kernel = kernel.GetKernel()
 
-                processor.Post(
-                    Msg.MsgSetArguments
-                        (fun () -> kernel.KernelFunc ndRange keys.Length keys values reducedValues reducedKeys)
-                )
+                kernel.KernelFunc ndRange keys.Length keys values reducedValues reducedKeys
 
-                processor.Post(Msg.CreateRunMsg<_, _>(kernel))
+                processor.RunKernel kernel
 
                 reducedValues, reducedKeys
 
@@ -352,7 +345,7 @@ module Reduce =
 
             let kernel = clContext.Compile kernel
 
-            fun (processor: MailboxProcessor<_>) allocationMode (resultLength: int) (offsets: ClArray<int>) (keys: ClArray<int>) (values: ClArray<'a>) ->
+            fun (processor: RawCommandQueue) allocationMode (resultLength: int) (offsets: ClArray<int>) (keys: ClArray<int>) (values: ClArray<'a>) ->
 
                 let reducedValues =
                     clContext.CreateClArrayWithSpecificAllocationMode(allocationMode, resultLength)
@@ -365,21 +358,9 @@ module Reduce =
 
                 let kernel = kernel.GetKernel()
 
-                processor.Post(
-                    Msg.MsgSetArguments
-                        (fun () ->
-                            kernel.KernelFunc
-                                ndRange
-                                resultLength
-                                keys.Length
-                                offsets
-                                keys
-                                values
-                                reducedValues
-                                reducedKeys)
-                )
+                kernel.KernelFunc ndRange resultLength keys.Length offsets keys values reducedValues reducedKeys
 
-                processor.Post(Msg.CreateRunMsg<_, _>(kernel))
+                processor.RunKernel kernel
 
                 reducedValues, reducedKeys
 
@@ -448,7 +429,7 @@ module Reduce =
 
             let kernel = clContext.Compile kernel
 
-            fun (processor: MailboxProcessor<_>) allocationMode (resultLength: int) (keys: ClArray<int>) (values: ClArray<'a>) ->
+            fun (processor: RawCommandQueue) allocationMode (resultLength: int) (keys: ClArray<int>) (values: ClArray<'a>) ->
                 if keys.Length > workGroupSize then
                     failwith "The length of the value should not exceed the size of the workgroup"
 
@@ -463,12 +444,9 @@ module Reduce =
 
                 let kernel = kernel.GetKernel()
 
-                processor.Post(
-                    Msg.MsgSetArguments
-                        (fun () -> kernel.KernelFunc ndRange keys.Length keys values reducedValues reducedKeys)
-                )
+                kernel.KernelFunc ndRange keys.Length keys values reducedValues reducedKeys
 
-                processor.Post(Msg.CreateRunMsg<_, _>(kernel))
+                processor.RunKernel kernel
 
                 reducedValues, reducedKeys
 
@@ -531,14 +509,14 @@ module Reduce =
                 let prefixSum =
                     ScanInternal.standardExcludeInPlace clContext workGroupSize
 
-                fun (processor: MailboxProcessor<_>) allocationMode (keys: ClArray<int>) (values: ClArray<'a option>) ->
+                fun (processor: RawCommandQueue) allocationMode (keys: ClArray<int>) (values: ClArray<'a option>) ->
 
                     let offsets =
                         getUniqueBitmap processor DeviceOnly keys
 
                     let uniqueKeysCount =
                         (prefixSum processor offsets)
-                            .ToHostAndFree processor
+                            .ToHostAndFree(processor)
 
                     let reducedValues =
                         clContext.CreateClArrayWithSpecificAllocationMode(DeviceOnly, uniqueKeysCount)
@@ -554,33 +532,29 @@ module Reduce =
 
                     let kernel = kernel.GetKernel()
 
-                    processor.Post(
-                        Msg.MsgSetArguments
-                            (fun () ->
-                                kernel.KernelFunc
-                                    ndRange
-                                    uniqueKeysCount
-                                    keys.Length
-                                    offsets
-                                    keys
-                                    values
-                                    reducedValues
-                                    reducedKeys
-                                    resultPositions)
-                    )
+                    kernel.KernelFunc
+                        ndRange
+                        uniqueKeysCount
+                        keys.Length
+                        offsets
+                        keys
+                        values
+                        reducedValues
+                        reducedKeys
+                        resultPositions
 
-                    processor.Post(Msg.CreateRunMsg<_, _>(kernel))
+                    processor.RunKernel kernel
 
-                    offsets.Free processor
+                    offsets.Free()
 
                     let resultLength =
                         (prefixSum processor resultPositions)
-                            .ToHostAndFree processor
+                            .ToHostAndFree(processor)
 
                     if resultLength = 0 then
-                        reducedValues.Free processor
-                        reducedKeys.Free processor
-                        resultPositions.Free processor
+                        reducedValues.Free()
+                        reducedKeys.Free()
+                        resultPositions.Free()
                         None
                     else
                         // write values
@@ -589,7 +563,7 @@ module Reduce =
 
                         scatterData processor resultPositions reducedValues resultValues
 
-                        reducedValues.Free processor
+                        reducedValues.Free()
 
                         // write keys
                         let resultKeys =
@@ -597,8 +571,8 @@ module Reduce =
 
                         scatterIndices processor resultPositions reducedKeys resultKeys
 
-                        reducedKeys.Free processor
-                        resultPositions.Free processor
+                        reducedKeys.Free()
+                        resultPositions.Free()
 
                         Some(resultValues, resultKeys)
 
@@ -663,7 +637,7 @@ module Reduce =
                 let prefixSum =
                     ScanInternal.standardExcludeInPlace clContext workGroupSize
 
-                fun (processor: MailboxProcessor<_>) allocationMode (resultLength: int) (offsets: ClArray<int>) (keys: ClArray<int>) (values: ClArray<'a>) ->
+                fun (processor: RawCommandQueue) allocationMode (resultLength: int) (offsets: ClArray<int>) (keys: ClArray<int>) (values: ClArray<'a>) ->
 
                     let reducedValues =
                         clContext.CreateClArrayWithSpecificAllocationMode(DeviceOnly, resultLength)
@@ -679,31 +653,27 @@ module Reduce =
 
                     let kernel = kernel.GetKernel()
 
-                    processor.Post(
-                        Msg.MsgSetArguments
-                            (fun () ->
-                                kernel.KernelFunc
-                                    ndRange
-                                    resultLength
-                                    keys.Length
-                                    offsets
-                                    keys
-                                    values
-                                    reducedValues
-                                    reducedKeys
-                                    resultPositions)
-                    )
+                    kernel.KernelFunc
+                        ndRange
+                        resultLength
+                        keys.Length
+                        offsets
+                        keys
+                        values
+                        reducedValues
+                        reducedKeys
+                        resultPositions
 
-                    processor.Post(Msg.CreateRunMsg<_, _>(kernel))
+                    processor.RunKernel kernel
 
                     let resultLength =
                         (prefixSum processor resultPositions)
-                            .ToHostAndFree processor
+                            .ToHostAndFree(processor)
 
                     if resultLength = 0 then
-                        reducedValues.Free processor
-                        reducedKeys.Free processor
-                        resultPositions.Free processor
+                        reducedValues.Free()
+                        reducedKeys.Free()
+                        resultPositions.Free()
 
                         None
                     else
@@ -713,7 +683,7 @@ module Reduce =
 
                         scatterData processor resultPositions reducedValues resultValues
 
-                        reducedValues.Free processor
+                        reducedValues.Free()
 
                         // write keys
                         let resultKeys =
@@ -721,8 +691,8 @@ module Reduce =
 
                         scatterIndices processor resultPositions reducedKeys resultKeys
 
-                        reducedKeys.Free processor
-                        resultPositions.Free processor
+                        reducedKeys.Free()
+                        resultPositions.Free()
 
                         Some(resultValues, resultKeys)
 
@@ -772,7 +742,7 @@ module Reduce =
 
             let kernel = clContext.Compile kernel
 
-            fun (processor: MailboxProcessor<_>) allocationMode (resultLength: int) (firstKeys: ClArray<int>) (secondKeys: ClArray<int>) (values: ClArray<'a>) ->
+            fun (processor: RawCommandQueue) allocationMode (resultLength: int) (firstKeys: ClArray<int>) (secondKeys: ClArray<int>) (values: ClArray<'a>) ->
 
                 let reducedValues =
                     clContext.CreateClArrayWithSpecificAllocationMode(allocationMode, resultLength)
@@ -788,21 +758,17 @@ module Reduce =
 
                 let kernel = kernel.GetKernel()
 
-                processor.Post(
-                    Msg.MsgSetArguments
-                        (fun () ->
-                            kernel.KernelFunc
-                                ndRange
-                                firstKeys.Length
-                                firstKeys
-                                secondKeys
-                                values
-                                reducedValues
-                                firstReducedKeys
-                                secondReducedKeys)
-                )
+                kernel.KernelFunc
+                    ndRange
+                    firstKeys.Length
+                    firstKeys
+                    secondKeys
+                    values
+                    reducedValues
+                    firstReducedKeys
+                    secondReducedKeys
 
-                processor.Post(Msg.CreateRunMsg<_, _>(kernel))
+                processor.RunKernel kernel
 
                 reducedValues, firstReducedKeys, secondReducedKeys
 
@@ -845,7 +811,7 @@ module Reduce =
 
             let kernel = clContext.Compile kernel
 
-            fun (processor: MailboxProcessor<_>) allocationMode (resultLength: int) (offsets: ClArray<int>) (firstKeys: ClArray<int>) (secondKeys: ClArray<int>) (values: ClArray<'a>) ->
+            fun (processor: RawCommandQueue) allocationMode (resultLength: int) (offsets: ClArray<int>) (firstKeys: ClArray<int>) (secondKeys: ClArray<int>) (values: ClArray<'a>) ->
 
                 let reducedValues =
                     clContext.CreateClArrayWithSpecificAllocationMode(allocationMode, resultLength)
@@ -861,23 +827,19 @@ module Reduce =
 
                 let kernel = kernel.GetKernel()
 
-                processor.Post(
-                    Msg.MsgSetArguments
-                        (fun () ->
-                            kernel.KernelFunc
-                                ndRange
-                                resultLength
-                                firstKeys.Length
-                                offsets
-                                firstKeys
-                                secondKeys
-                                values
-                                reducedValues
-                                firstReducedKeys
-                                secondReducedKeys)
-                )
+                kernel.KernelFunc
+                    ndRange
+                    resultLength
+                    firstKeys.Length
+                    offsets
+                    firstKeys
+                    secondKeys
+                    values
+                    reducedValues
+                    firstReducedKeys
+                    secondReducedKeys
 
-                processor.Post(Msg.CreateRunMsg<_, _>(kernel))
+                processor.RunKernel kernel
 
                 reducedValues, firstReducedKeys, secondReducedKeys
 
@@ -942,7 +904,7 @@ module Reduce =
                 let prefixSum =
                     ScanInternal.standardExcludeInPlace clContext workGroupSize
 
-                fun (processor: MailboxProcessor<_>) allocationMode (resultLength: int) (offsets: ClArray<int>) (firstKeys: ClArray<int>) (secondKeys: ClArray<int>) (values: ClArray<'a>) ->
+                fun (processor: RawCommandQueue) allocationMode (resultLength: int) (offsets: ClArray<int>) (firstKeys: ClArray<int>) (secondKeys: ClArray<int>) (values: ClArray<'a>) ->
 
                     let reducedValues =
                         clContext.CreateClArrayWithSpecificAllocationMode(allocationMode, resultLength)
@@ -961,34 +923,30 @@ module Reduce =
 
                     let kernel = kernel.GetKernel()
 
-                    processor.Post(
-                        Msg.MsgSetArguments
-                            (fun () ->
-                                kernel.KernelFunc
-                                    ndRange
-                                    resultLength
-                                    firstKeys.Length
-                                    offsets
-                                    firstKeys
-                                    secondKeys
-                                    values
-                                    reducedValues
-                                    firstReducedKeys
-                                    secondReducedKeys
-                                    resultPositions)
-                    )
+                    kernel.KernelFunc
+                        ndRange
+                        resultLength
+                        firstKeys.Length
+                        offsets
+                        firstKeys
+                        secondKeys
+                        values
+                        reducedValues
+                        firstReducedKeys
+                        secondReducedKeys
+                        resultPositions
 
-                    processor.Post(Msg.CreateRunMsg<_, _>(kernel))
+                    processor.RunKernel kernel
 
                     let resultLength =
                         (prefixSum processor resultPositions)
-                            .ToHostAndFree processor
+                            .ToHostAndFree(processor)
 
                     if resultLength = 0 then
-                        reducedValues.Free processor
-                        firstReducedKeys.Free processor
-                        secondReducedKeys.Free processor
-                        resultPositions.Free processor
+                        reducedValues.Free()
+                        firstReducedKeys.Free()
+                        secondReducedKeys.Free()
+                        resultPositions.Free()
 
                         None
                     else
@@ -998,7 +956,7 @@ module Reduce =
 
                         scatterData processor resultPositions reducedValues resultValues
 
-                        reducedValues.Free processor
+                        reducedValues.Free()
 
                         // write first keys
                         let resultFirstKeys =
@@ -1006,7 +964,7 @@ module Reduce =
 
                         scatterIndices processor resultPositions firstReducedKeys resultFirstKeys
 
-                        firstReducedKeys.Free processor
+                        firstReducedKeys.Free()
 
                         // write second keys
                         let resultSecondKeys =
@@ -1014,8 +972,8 @@ module Reduce =
 
                         scatterIndices processor resultPositions secondReducedKeys resultSecondKeys
 
-                        secondReducedKeys.Free processor
+                        secondReducedKeys.Free()
 
-                        resultPositions.Free processor
+                        resultPositions.Free()
 
                         Some(resultValues, resultFirstKeys, resultSecondKeys)

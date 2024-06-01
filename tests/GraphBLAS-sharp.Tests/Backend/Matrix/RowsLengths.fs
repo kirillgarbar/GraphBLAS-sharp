@@ -26,7 +26,7 @@ let makeTest isZero testFun (array: 'a [,]) =
         let clMatrix = matrix.ToDevice context
         let (clActual: ClArray<int>) = testFun processor HostInterop clMatrix
 
-        clMatrix.Dispose processor
+        clMatrix.Dispose()
         let actual = clActual.ToHostAndFree processor
 
         let expected =

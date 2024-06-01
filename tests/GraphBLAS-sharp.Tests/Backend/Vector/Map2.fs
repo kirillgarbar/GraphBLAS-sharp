@@ -10,6 +10,7 @@ open GraphBLAS.FSharp.Tests
 open GraphBLAS.FSharp.Objects
 open GraphBLAS.FSharp.Objects.ClVectorExtensions
 open GraphBLAS.FSharp.Objects.ClContextExtensions
+open Brahma.FSharp
 
 let logger = Log.create "Vector.ElementWise.Tests"
 
@@ -44,8 +45,8 @@ let correctnessGenericTest
     isEqual
     zero
     op
-    (addFun: MailboxProcessor<_> -> AllocationFlag -> ClVector<'a> -> ClVector<'a> -> ClVector<'a> option)
-    (toDense: MailboxProcessor<_> -> AllocationFlag -> ClVector<'a> -> ClVector<'a>)
+    (addFun: RawCommandQueue -> AllocationFlag -> ClVector<'a> -> ClVector<'a> -> ClVector<'a> option)
+    (toDense: RawCommandQueue -> AllocationFlag -> ClVector<'a> -> ClVector<'a>)
     case
     (leftArray: 'a [], rightArray: 'a [])
     =
@@ -77,14 +78,14 @@ let correctnessGenericTest
 
                 let actual = denseActual.ToHost q
 
-                res.Dispose q
-                denseActual.Dispose q
+                res.Dispose()
+                denseActual.Dispose()
 
                 checkResult isEqual zero op actual leftArray rightArray
             | _ -> ()
 
-            firstVector.Dispose q
-            secondVector.Dispose q
+            firstVector.Dispose()
+            secondVector.Dispose()
         with
         | ex when ex.Message = "InvalidBufferSize" -> ()
         | ex -> raise ex

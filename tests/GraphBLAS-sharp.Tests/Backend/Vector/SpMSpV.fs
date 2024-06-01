@@ -10,6 +10,7 @@ open GraphBLAS.FSharp.Tests.TestCases
 open Microsoft.FSharp.Collections
 open Microsoft.FSharp.Core
 open GraphBLAS.FSharp.Objects
+open Brahma.FSharp
 
 let config = Utils.defaultConfig
 
@@ -59,7 +60,7 @@ let correctnessGenericTest
     some
     sumOp
     mulOp
-    (spMV: MailboxProcessor<_> -> ClMatrix<'a> -> ClVector<'a> -> ClVector<'a> option)
+    (spMV: RawCommandQueue -> ClMatrix<'a> -> ClVector<'a> -> ClVector<'a> option)
     (isEqual: 'a -> 'a -> bool)
     q
     (testContext: TestContext)
@@ -85,11 +86,11 @@ let correctnessGenericTest
 
                 match spMV testContext.Queue m v with
                 | Some (ClVector.Sparse res) ->
-                    m.Dispose q
-                    v.Dispose q
+                    m.Dispose()
+                    v.Dispose()
                     let hostResIndices = res.Indices.ToHost q
                     let hostResValues = res.Values.ToHost q
-                    res.Dispose q
+                    res.Dispose()
 
                     checkResult sumOp mulOp zero matrix vector hostResIndices hostResValues
                 | _ -> failwith "Result should not be empty while standard operations are tested"
@@ -114,7 +115,7 @@ let createTest spmspv testContext (zero: 'a) some isEqual add mul addQ mulQ =
 let testFixturesSpMSpV (testContext: TestContext) =
     [ let context = testContext.ClContext
       let q = testContext.Queue
-      q.Error.Add(fun e -> failwithf "%A" e)
+      //q.Error.Add(fun e -> failwithf "%A" e)
 
       createTest
           Operations.SpMSpVBool

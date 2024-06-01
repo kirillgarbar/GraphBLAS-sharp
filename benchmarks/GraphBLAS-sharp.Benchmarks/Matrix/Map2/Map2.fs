@@ -8,7 +8,6 @@ open GraphBLAS.FSharp.IO
 open GraphBLAS.FSharp.Objects
 open GraphBLAS.FSharp.Objects.MatrixExtensions
 open GraphBLAS.FSharp.Objects.ClContextExtensions
-open GraphBLAS.FSharp.Objects.MailboxProcessorExtensions
 open GraphBLAS.FSharp.Backend.Quotes
 open GraphBLAS.FSharp.Benchmarks
 
@@ -41,7 +40,7 @@ type Benchmarks<'matrixT, 'elem when 'matrixT :> IDeviceMemObject and 'elem : st
 
     member this.Processor =
         let p = (fst this.OclContextInfo).Queue
-        p.Error.Add(fun e -> failwithf "%A" e)
+        //p.Error.Add(fun e -> failwithf "%A" e)
         p
 
     static member AvailableContexts = Utils.availableContexts
@@ -80,11 +79,11 @@ type Benchmarks<'matrixT, 'elem when 'matrixT :> IDeviceMemObject and 'elem : st
         this.ResultMatrix <- this.FunToBenchmark this.Processor HostInterop firstMatrix secondMatrix
 
     member this.ClearInputMatrices() =
-        firstMatrix.Dispose this.Processor
-        secondMatrix.Dispose this.Processor
+        firstMatrix.Dispose()
+        secondMatrix.Dispose()
 
     member this.ClearResult() =
-        this.ResultMatrix.Dispose this.Processor
+        this.ResultMatrix.Dispose()
 
     member this.ReadMatrices() =
         firstMatrixHost <- this.ReadMatrix <| fst this.InputMatrixReader
@@ -119,12 +118,12 @@ module WithoutTransfer =
         override this.GlobalSetup() =
             this.ReadMatrices ()
             this.LoadMatricesToGPU ()
-            finish this.Processor
+            this.Processor.Synchronize()
 
         [<Benchmark>]
         override this.Benchmark () =
             this.EWiseAddition()
-            finish this.Processor
+            this.Processor.Synchronize()
 
         [<IterationCleanup>]
         override this.IterationCleanup () =
@@ -252,7 +251,7 @@ module WithTransfer =
         [<GlobalSetup>]
         override this.GlobalSetup() =
             this.ReadMatrices()
-            finish this.Processor
+            this.Processor.Synchronize()
 
         [<GlobalCleanup>]
         override this.GlobalCleanup() = ()
@@ -261,16 +260,15 @@ module WithTransfer =
         override this.IterationCleanup() =
             this.ClearInputMatrices()
             this.ClearResult()
-            finish this.Processor
+            this.Processor.Synchronize()
 
         [<Benchmark>]
         override this.Benchmark() =
             this.LoadMatricesToGPU()
             this.EWiseAddition()
-            this.Processor.PostAndReply Msg.MsgNotifyMe
+            this.Processor.Synchronize()
             resultToHost this.ResultMatrix this.Processor |> ignore
-            this.Processor.PostAndReply Msg.MsgNotifyMe
-
+            this.Processor.Synchronize()
     module COO =
         type Float32() =
 

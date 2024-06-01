@@ -14,6 +14,7 @@ open GraphBLAS.FSharp.Objects
 open GraphBLAS.FSharp.Objects.ClContextExtensions
 open GraphBLAS.FSharp.Objects.ClVectorExtensions
 open Mono.CompilerServices.SymbolWriter
+open Brahma.FSharp
 
 let logger = Log.create "Vector.Map.Tests"
 
@@ -45,8 +46,8 @@ let checkResult isEqual op zero (baseVector: 'a []) (actual: Vector<'b>) =
 let correctnessGenericTest
     zero
     op
-    (addFun: MailboxProcessor<_> -> AllocationFlag -> ClVector<'a> -> ClVector<'a>)
-    (toDense: MailboxProcessor<_> -> AllocationFlag -> ClVector<'a> -> ClVector<'a>)
+    (addFun: RawCommandQueue -> AllocationFlag -> ClVector<'a> -> ClVector<'a>)
+    (toDense: RawCommandQueue -> AllocationFlag -> ClVector<'a> -> ClVector<'a>)
     (isEqual: 'a -> 'a -> bool)
     (case: OperationCase<VectorFormat>)
     (array: 'a [])
@@ -67,14 +68,14 @@ let correctnessGenericTest
         try
             let res = addFun q HostInterop vector
 
-            vector.Dispose q
+            vector.Dispose()
 
             let denseActual = toDense q HostInterop res
 
             let actual = denseActual.ToHost q
 
-            res.Dispose q
-            denseActual.Dispose q
+            res.Dispose()
+            denseActual.Dispose()
 
             checkResult isEqual op zero array actual
         with
@@ -101,7 +102,7 @@ let createTestMap case (zero: 'a) (constant: 'a) binOp isEqual opQ =
 
 let testFixturesMapNot case =
     [ let q = case.TestContext.Queue
-      q.Error.Add(fun e -> failwithf "%A" e)
+      //q.Error.Add(fun e -> failwithf "%A" e)
 
       createTestMap case false true (fun _ -> not) (=) (fun _ _ -> ArithmeticOperations.notOption) ]
 
@@ -111,7 +112,7 @@ let notTests =
 let testFixturesMapAdd case =
     [ let context = case.TestContext.ClContext
       let q = case.TestContext.Queue
-      q.Error.Add(fun e -> failwithf "%A" e)
+      //q.Error.Add(fun e -> failwithf "%A" e)
 
       createTestMap case 0 10 (+) (=) ArithmeticOperations.addLeftConst
 
@@ -128,7 +129,7 @@ let addTests =
 let testFixturesMapMul case =
     [ let context = case.TestContext.ClContext
       let q = case.TestContext.Queue
-      q.Error.Add(fun e -> failwithf "%A" e)
+      //q.Error.Add(fun e -> failwithf "%A" e)
 
       createTestMap case 0 10 (*) (=) ArithmeticOperations.mulLeftConst
 

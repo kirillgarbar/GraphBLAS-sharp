@@ -37,7 +37,7 @@ module internal Map =
         let kernel =
             clContext.Compile <| preparePositions opAdd
 
-        fun (processor: MailboxProcessor<_>) (size: int) (values: ClArray<'a>) (indices: ClArray<int>) ->
+        fun (processor: RawCommandQueue) (size: int) (values: ClArray<'a>) (indices: ClArray<int>) ->
 
             let resultBitmap =
                 clContext.CreateClArrayWithSpecificAllocationMode<int>(DeviceOnly, size)
@@ -52,21 +52,9 @@ module internal Map =
 
             let kernel = kernel.GetKernel()
 
-            processor.Post(
-                Msg.MsgSetArguments
-                    (fun () ->
-                        kernel.KernelFunc
-                            ndRange
-                            size
-                            values.Length
-                            values
-                            indices
-                            resultBitmap
-                            resultValues
-                            resultIndices)
-            )
+            kernel.KernelFunc ndRange size values.Length values indices resultBitmap resultValues resultIndices
 
-            processor.Post(Msg.CreateRunMsg<_, _> kernel)
+            processor.RunKernel kernel
 
             resultBitmap, resultValues, resultIndices
 
@@ -82,7 +70,7 @@ module internal Map =
         let setPositions =
             Common.setPositions<'b> clContext workGroupSize
 
-        fun (queue: MailboxProcessor<_>) allocationMode (vector: ClVector.Sparse<'a>) ->
+        fun (queue: RawCommandQueue) allocationMode (vector: ClVector.Sparse<'a>) ->
 
             let bitmap, values, indices =
                 map queue vector.Size vector.Values vector.Indices
@@ -90,9 +78,9 @@ module internal Map =
             let resultValues, resultIndices =
                 setPositions queue allocationMode values indices bitmap
 
-            queue.Post(Msg.CreateFreeMsg<_>(bitmap))
-            queue.Post(Msg.CreateFreeMsg<_>(values))
-            queue.Post(Msg.CreateFreeMsg<_>(indices))
+            bitmap.Free()
+            values.Free()
+            indices.Free()
 
             { Context = clContext
               Indices = resultIndices
@@ -122,7 +110,7 @@ module internal Map =
             let kernel =
                 clContext.Compile <| preparePositions opAdd
 
-            fun (processor: MailboxProcessor<_>) (value: ClCell<'a option>) (vector: Sparse<'b>) ->
+            fun (processor: RawCommandQueue) (value: ClCell<'a option>) (vector: Sparse<'b>) ->
 
                 let resultBitmap =
                     clContext.CreateClArrayWithSpecificAllocationMode<int>(DeviceOnly, vector.Size)
@@ -138,22 +126,18 @@ module internal Map =
 
                 let kernel = kernel.GetKernel()
 
-                processor.Post(
-                    Msg.MsgSetArguments
-                        (fun () ->
-                            kernel.KernelFunc
-                                ndRange
-                                value
-                                vector.Size
-                                vector.Values.Length
-                                vector.Indices
-                                vector.Values
-                                resultIndices
-                                resultValues
-                                resultBitmap)
-                )
+                kernel.KernelFunc
+                    ndRange
+                    value
+                    vector.Size
+                    vector.Values.Length
+                    vector.Indices
+                    vector.Values
+                    resultIndices
+                    resultValues
+                    resultBitmap
 
-                processor.Post(Msg.CreateRunMsg<_, _> kernel)
+                processor.RunKernel kernel
 
                 resultIndices, resultValues, resultBitmap
 
@@ -176,21 +160,21 @@ module internal Map =
             let init =
                 ClArray.init <@ id @> clContext workGroupSize
 
-            fun (queue: MailboxProcessor<_>) allocationMode (value: 'a option) size ->
+            fun (queue: RawCommandQueue) allocationMode (value: 'a option) size ->
                 function
                 | Some vector ->
                     let valueClCell = clContext.CreateClCell value
 
                     let indices, values, bitmap = map queue valueClCell vector
 
-                    valueClCell.Free queue
+                    valueClCell.Free()
 
                     let result =
                         setPositions queue allocationMode values indices bitmap
 
-                    indices.Free queue
-                    values.Free queue
-                    bitmap.Free queue
+                    indices.Free()
+                    values.Free()
+                    bitmap.Free()
 
                     result
                     |> Option.map

@@ -22,13 +22,13 @@ module Matrix =
 
         let copyData = ClArray.copy clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (matrix: COO<'a>) ->
+        fun (processor: RawCommandQueue) allocationMode (matrix: COO<'a>) ->
             { Context = clContext
               RowCount = matrix.RowCount
               ColumnCount = matrix.ColumnCount
-              Rows = copy processor allocationMode matrix.Rows
-              Columns = copy processor allocationMode matrix.Columns
-              Values = copyData processor allocationMode matrix.Values }
+              Rows = copy processor allocationMode matrix.Rows matrix.Rows.Length
+              Columns = copy processor allocationMode matrix.Columns matrix.Columns.Length
+              Values = copyData processor allocationMode matrix.Values matrix.Values.Length }
 
     /// <summary>
     /// Builds a new COO matrix whose elements are the results of applying the given function
@@ -83,16 +83,16 @@ module Matrix =
 
         let copyData = ClArray.copy clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (matrix: ClMatrix.COO<'a>) ->
+        fun (processor: RawCommandQueue) allocationMode (matrix: ClMatrix.COO<'a>) ->
 
             let resultRows =
-                copy processor allocationMode matrix.Rows
+                copy processor allocationMode matrix.Rows matrix.Rows.Length
 
             let resultColumns =
-                copy processor allocationMode matrix.Columns
+                copy processor allocationMode matrix.Columns matrix.Columns.Length
 
             let resultValues =
-                copyData processor allocationMode matrix.Values
+                copyData processor allocationMode matrix.Values matrix.Values.Length
 
             { Context = clContext
               RowIndices = resultRows
@@ -124,7 +124,7 @@ module Matrix =
         let scan =
             Common.PrefixSum.runBackwardsIncludeInPlace <@ min @> clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (rowIndices: ClArray<int>) rowCount ->
+        fun (processor: RawCommandQueue) allocationMode (rowIndices: ClArray<int>) rowCount ->
 
             let nnz = rowIndices.Length
 
@@ -134,10 +134,10 @@ module Matrix =
             let kernel = program.GetKernel()
 
             let ndRange = Range1D.CreateValid(nnz, workGroupSize)
-            processor.Post(Msg.MsgSetArguments(fun () -> kernel.KernelFunc ndRange rowIndices nnz rowPointers))
-            processor.Post(Msg.CreateRunMsg<_, _> kernel)
+            kernel.KernelFunc ndRange rowIndices nnz rowPointers
+            processor.RunKernel kernel
 
-            (scan processor rowPointers nnz).Free processor
+            (scan processor rowPointers nnz).Free()
 
             rowPointers
 
@@ -154,15 +154,15 @@ module Matrix =
 
         let copyData = ClArray.copy clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (matrix: ClMatrix.COO<'a>) ->
+        fun (processor: RawCommandQueue) allocationMode (matrix: ClMatrix.COO<'a>) ->
             let rowPointers =
                 prepare processor allocationMode matrix.Rows matrix.RowCount
 
             let cols =
-                copy processor allocationMode matrix.Columns
+                copy processor allocationMode matrix.Columns matrix.Columns.Length
 
             let values =
-                copyData processor allocationMode matrix.Values
+                copyData processor allocationMode matrix.Values matrix.Values.Length
 
             { Context = clContext
               RowCount = matrix.RowCount
@@ -180,11 +180,11 @@ module Matrix =
     let toCSRInPlace (clContext: ClContext) workGroupSize =
         let prepare = compressRows clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (matrix: ClMatrix.COO<'a>) ->
+        fun (processor: RawCommandQueue) allocationMode (matrix: ClMatrix.COO<'a>) ->
             let rowPointers =
                 prepare processor allocationMode matrix.Rows matrix.RowCount
 
-            matrix.Rows.Free processor
+            matrix.Rows.Free()
 
             { Context = clContext
               RowCount = matrix.RowCount
@@ -202,9 +202,9 @@ module Matrix =
     let transposeInPlace (clContext: ClContext) workGroupSize =
 
         let sort =
-            Common.Sort.Bitonic.sortKeyValuesInplace clContext workGroupSize
+            Common.Sort.Bitonic.sortRowsColumnsValuesInplace clContext workGroupSize
 
-        fun (queue: MailboxProcessor<_>) (matrix: ClMatrix.COO<'a>) ->
+        fun (queue: RawCommandQueue) (matrix: ClMatrix.COO<'a>) ->
             sort queue matrix.Columns matrix.Rows matrix.Values
 
             { Context = clContext
@@ -227,14 +227,14 @@ module Matrix =
 
         let copyData = ClArray.copy clContext workGroupSize
 
-        fun (queue: MailboxProcessor<_>) allocationMode (matrix: ClMatrix.COO<'a>) ->
+        fun (queue: RawCommandQueue) allocationMode (matrix: ClMatrix.COO<'a>) ->
 
             { Context = clContext
               RowCount = matrix.RowCount
               ColumnCount = matrix.ColumnCount
-              Rows = copy queue allocationMode matrix.Rows
-              Columns = copy queue allocationMode matrix.Columns
-              Values = copyData queue allocationMode matrix.Values }
+              Rows = copy queue allocationMode matrix.Rows matrix.Rows.Length
+              Columns = copy queue allocationMode matrix.Columns matrix.Columns.Length
+              Values = copyData queue allocationMode matrix.Values matrix.Values.Length }
             |> transposeInPlace queue
 
     /// <summary>
@@ -288,7 +288,7 @@ module Matrix =
 
         let blitData = ClArray.blit clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode startRow count (matrix: ClMatrix.COO<'a>) ->
+        fun (processor: RawCommandQueue) allocationMode startRow count (matrix: ClMatrix.COO<'a>) ->
             if count <= 0 then
                 failwith "Count must be greater than zero"
 
@@ -311,8 +311,8 @@ module Matrix =
                     .ToHostAndFree processor
                 - 1
 
-            firstRowClCell.Free processor
-            lastRowClCell.Free processor
+            firstRowClCell.Free()
+            lastRowClCell.Free()
 
             let resultLength = lastIndex - firstIndex + 1
 

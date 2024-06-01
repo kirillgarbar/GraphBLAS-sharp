@@ -33,7 +33,7 @@ module internal SSSP =
         let containsNonZero =
             Vector.exists Predicates.isSome clContext workGroupSize
 
-        fun (queue: MailboxProcessor<Msg>) (matrix: ClMatrix<int>) (source: int) ->
+        fun (queue: RawCommandQueue) (matrix: ClMatrix<int>) (source: int) ->
             let vertexCount = matrix.RowCount
 
             //None is System.Int32.MaxValue
@@ -73,7 +73,7 @@ module internal SSSP =
                     <| (containsNonZero queue front1)
                         .ToHostAndFree(queue)
 
-            front1.Dispose queue
-            front2.Dispose queue
+            front1.Dispose()
+            front2.Dispose()
 
             distance

@@ -10,6 +10,7 @@ open GraphBLAS.FSharp.Backend
 open GraphBLAS.FSharp.Objects
 open GraphBLAS.FSharp.Objects.MatrixExtensions
 open GraphBLAS.FSharp.Objects.ClContextExtensions
+open Brahma.FSharp
 
 let logger = Log.create "Convert.Tests"
 
@@ -21,7 +22,7 @@ let context = defaultContext.ClContext
 
 let q = defaultContext.Queue
 
-q.Error.Add(fun e -> failwithf "%A" e)
+//q.Error.Add(fun e -> failwithf "%A" e)
 
 let makeTest context q formatFrom formatTo convertFun isZero (array: 'a [,]) =
     let mtx =
@@ -32,8 +33,8 @@ let makeTest context q formatFrom formatTo convertFun isZero (array: 'a [,]) =
             let mBefore = mtx.ToDevice context
             let mAfter: ClMatrix<'a> = convertFun q HostInterop mBefore
             let res = mAfter.ToHost q
-            mBefore.Dispose q
-            mAfter.Dispose q
+            mBefore.Dispose()
+            mAfter.Dispose()
             res
 
         logger.debug (

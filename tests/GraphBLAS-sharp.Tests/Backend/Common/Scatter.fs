@@ -33,8 +33,8 @@ let makeTest<'a when 'a: equality> hostScatter scatter (array: (int * 'a) []) (r
 
             scatter q clPositions clValues clResult
 
-            clValues.Free q
-            clPositions.Free q
+            clValues.Free()
+            clPositions.Free()
             clResult.ToHostAndFree q
 
         $"Arrays should be equal."
@@ -51,7 +51,7 @@ let testFixturesFirst<'a when 'a: equality> =
     |> testPropertyWithConfig config $"Correctness on %A{typeof<'a>}"
 
 let tests =
-    q.Error.Add(fun e -> failwithf $"%A{e}")
+    //q.Error.Add(fun e -> failwithf $"%A{e}")
 
     let last =
         [ testFixturesLast<int>
@@ -81,7 +81,7 @@ let makeTestInit<'a when 'a: equality> hostScatter valueMap scatter (positions: 
 
         scatter q clPositions clResult
 
-        clPositions.Free q
+        clPositions.Free()
         let actual = clResult.ToHostAndFree q
 
         $"Arrays should be equal."
@@ -95,7 +95,7 @@ let createInitTest clScatter hostScatter name valuesMap valuesMapQ =
     |> testPropertyWithConfig config name
 
 let initTests =
-    q.Error.Add(fun e -> failwithf $"%A{e}")
+    //sq.Error.Add(fun e -> failwithf $"%A{e}")
 
     let inc = ((+) 1)
 

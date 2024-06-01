@@ -25,7 +25,7 @@ let makeTestGetChunk<'a when 'a: equality> testFun (array: 'a [], startPosition,
         let (clActual: ClArray<'a>) =
             testFun processor HostInterop clArray startPosition count
 
-        clArray.Free processor
+        clArray.Free()
         let actual = clActual.ToHostAndFree processor
 
         "Results must be the same"
@@ -56,7 +56,7 @@ let makeTestChunkBySize<'a when 'a: equality> isEqual testFun (array: 'a [], chu
         let clActual: ClArray<'a> [] =
             (testFun processor HostInterop chunkSize clArray)
 
-        clArray.Free processor
+        clArray.Free()
 
         let actual =
             clActual

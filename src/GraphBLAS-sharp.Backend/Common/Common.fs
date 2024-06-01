@@ -8,6 +8,24 @@ module Common =
     module Sort =
         module Bitonic =
             /// <summary>
+            /// Sorts in-place input array of values by their indices,
+            /// which are stored in two given arrays of keys: rows and columns.
+            /// When comparing, it first looks at rows, then columns.
+            /// Note that maximum possible workGroupSize is used internally for better perfomance.
+            /// </summary>
+            /// <example>
+            /// <code>
+            /// let keys = [| 0; 0; 3; 2; 1; 0; 5 |]
+            /// let values = [| 1.9; 2.8; 3.7; 4.6; 5.5; 6.4; 7.3; |]
+            /// sortKeyValuesInplace clContext 32 processor rows columns values
+            /// ...
+            /// > val keys = [| 0; 0; 0; 1; 2; 3; 5 |]
+            /// > val values = [| 1.9; 2.8; 6.4; 5.5; 4.6; 3.7; 7.3 |]
+            /// </code>
+            /// </example>
+            let sortKeyValuesInplace<'a> = Sort.Bitonic.sortKeyValuesInplace<'a>
+
+            /// <summary>
             /// Sorts in-place input array of values by their 2d indices,
             /// which are stored in two given arrays of keys: rows and columns.
             /// When comparing, it first looks at rows, then columns.
@@ -25,7 +43,8 @@ module Common =
             /// > val values = [| 1.9; 2.8; 6.4; 5.5; 4.6; 3.7; 7.3 |]
             /// </code>
             /// </example>
-            let sortKeyValuesInplace<'a> = Sort.Bitonic.sortKeyValuesInplace<'a>
+            let sortRowsColumnsValuesInplace<'a> =
+                Sort.Bitonic.sortRowsColumnsValuesInplace<'a>
 
         module Radix =
             /// <summary>

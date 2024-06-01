@@ -8,6 +8,7 @@ open GraphBLAS.FSharp.Objects.MatrixExtensions
 open GraphBLAS.FSharp.Test
 open GraphBLAS.FSharp.Tests
 open GraphBLAS.FSharp.Tests.Context
+open Brahma.FSharp
 
 let logger = Log.create "SpGeMM.Masked.Tests"
 
@@ -49,10 +50,10 @@ let makeTest context q zero isEqual plus mul mxmFun (leftMatrix: 'a [,], rightMa
             let (result: ClMatrix<'a>) = mxmFun q m1 m2 matrixMask
             let actual = result.ToHost q
 
-            m1.Dispose q
-            m2.Dispose q
-            matrixMask.Dispose q
-            result.Dispose q
+            m1.Dispose()
+            m2.Dispose()
+            matrixMask.Dispose()
+            result.Dispose()
 
             // Check result
             "Matrices should be equal"
@@ -66,7 +67,7 @@ let tests =
               arbitrary = [ typeof<Generators.PairOfMatricesOfCompatibleSizeWithMask> ] }
 
     let q = defaultContext.Queue
-    q.Error.Add(fun e -> failwithf "%A" e)
+    //q.Error.Add(fun e -> failwithf "%A" e)
 
     [ let add =
           <@ fun x y ->

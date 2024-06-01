@@ -13,6 +13,7 @@ open GraphBLAS.FSharp.Tests.TestCases
 open GraphBLAS.FSharp.Objects
 open GraphBLAS.FSharp.Objects.ClContextExtensions
 open GraphBLAS.FSharp.Objects.MatrixExtensions
+open Brahma.FSharp
 
 let logger = Log.create "Map.Tests"
 
@@ -51,7 +52,7 @@ let checkResult isEqual op zero (baseMtx: 'a [,]) (actual: Matrix<'a>) =
 let correctnessGenericTest
     zero
     op
-    (addFun: MailboxProcessor<_> -> AllocationFlag -> ClMatrix<'a> -> ClMatrix<'b>)
+    (addFun: RawCommandQueue -> AllocationFlag -> ClMatrix<'a> -> ClMatrix<'b>)
     toCOOFun
     (isEqual: 'a -> 'a -> bool)
     q
@@ -70,13 +71,13 @@ let correctnessGenericTest
 
                 let res = addFun q HostInterop m
 
-                m.Dispose q
+                m.Dispose()
 
                 let (cooRes: ClMatrix<'a>) = toCOOFun q HostInterop res
                 let actual = cooRes.ToHost q
 
-                cooRes.Dispose q
-                res.Dispose q
+                cooRes.Dispose()
+                res.Dispose()
 
                 logger.debug (
                     eventX "Actual is {actual}"
@@ -108,7 +109,7 @@ let createTestMap case (zero: 'a) (constant: 'a) binOp isEqual opQ =
 
 let testFixturesMapNot case =
     [ let q = case.TestContext.Queue
-      q.Error.Add(fun e -> failwithf "%A" e)
+      //q.Error.Add(fun e -> failwithf "%A" e)
 
       createTestMap case false true (fun _ -> not) (=) (fun _ _ -> ArithmeticOperations.notOption) ]
 
@@ -118,7 +119,7 @@ let notTests =
 let testFixturesMapAdd case =
     [ let context = case.TestContext.ClContext
       let q = case.TestContext.Queue
-      q.Error.Add(fun e -> failwithf "%A" e)
+      //q.Error.Add(fun e -> failwithf "%A" e)
 
       createTestMap case 0 10 (+) (=) ArithmeticOperations.addLeftConst
 
@@ -135,7 +136,7 @@ let addTests =
 let testFixturesMapMul case =
     [ let context = case.TestContext.ClContext
       let q = case.TestContext.Queue
-      q.Error.Add(fun e -> failwithf "%A" e)
+      //q.Error.Add(fun e -> failwithf "%A" e)
 
       createTestMap case 0 10 (*) (=) ArithmeticOperations.mulLeftConst
 

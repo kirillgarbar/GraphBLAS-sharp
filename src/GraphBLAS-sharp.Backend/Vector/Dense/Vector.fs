@@ -8,6 +8,7 @@ open GraphBLAS.FSharp.Backend.Quotes
 open GraphBLAS.FSharp.Objects.ClVector
 open GraphBLAS.FSharp.Objects.ClContextExtensions
 open GraphBLAS.FSharp.Objects.ClCellExtensions
+open GraphBLAS.FSharp.Objects.ArraysExtensions
 
 module Vector =
     let map<'a, 'b when 'a: struct and 'b: struct>
@@ -18,7 +19,7 @@ module Vector =
 
         let map = Map.map op clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (leftVector: ClArray<'a option>) ->
+        fun (processor: RawCommandQueue) allocationMode (leftVector: ClArray<'a option>) ->
 
             map processor allocationMode leftVector
 
@@ -31,7 +32,7 @@ module Vector =
         let map2InPlace =
             Map.map2InPlace opAdd clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) (leftVector: ClArray<'a option>) (rightVector: ClArray<'b option>) (resultVector: ClArray<'c option>) ->
+        fun (processor: RawCommandQueue) (leftVector: ClArray<'a option>) (rightVector: ClArray<'b option>) (resultVector: ClArray<'c option>) ->
 
             map2InPlace processor leftVector rightVector resultVector
 
@@ -43,7 +44,7 @@ module Vector =
 
         let map2 = Map.map2 opAdd clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (leftVector: ClArray<'a option>) (rightVector: ClArray<'b option>) ->
+        fun (processor: RawCommandQueue) allocationMode (leftVector: ClArray<'a option>) (rightVector: ClArray<'b option>) ->
 
             map2 processor allocationMode leftVector rightVector
 
@@ -66,7 +67,7 @@ module Vector =
 
         let kernel = clContext.Compile(fillSubVectorKernel)
 
-        fun (processor: MailboxProcessor<_>) (leftVector: ClArray<'a option>) (maskVector: ClArray<'b option>) (value: 'a) (resultVector: ClArray<'a option>) ->
+        fun (processor: RawCommandQueue) (leftVector: ClArray<'a option>) (maskVector: ClArray<'b option>) (value: 'a) (resultVector: ClArray<'a option>) ->
 
             let ndRange =
                 Range1D.CreateValid(leftVector.Length, workGroupSize)
@@ -75,14 +76,11 @@ module Vector =
 
             let valueCell = clContext.CreateClCell(value)
 
-            processor.Post(
-                Msg.MsgSetArguments
-                    (fun () -> kernel.KernelFunc ndRange leftVector.Length leftVector maskVector valueCell resultVector)
-            )
+            kernel.KernelFunc ndRange leftVector.Length leftVector maskVector valueCell resultVector
 
-            processor.Post(Msg.CreateRunMsg<_, _>(kernel))
+            processor.RunKernel kernel
 
-            valueCell.Free processor
+            valueCell.Free()
 
     let assignByMask<'a, 'b when 'a: struct and 'b: struct>
         (maskOp: Expr<'a option -> 'b option -> 'a -> 'a option>)
@@ -93,7 +91,7 @@ module Vector =
         let assignByMask =
             assignByMaskInPlace maskOp clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (leftVector: ClArray<'a option>) (maskVector: ClArray<'b option>) (value: 'a) ->
+        fun (processor: RawCommandQueue) allocationMode (leftVector: ClArray<'a option>) (maskVector: ClArray<'b option>) (value: 'a) ->
             let resultVector =
                 clContext.CreateClArrayWithSpecificAllocationMode(allocationMode, leftVector.Length)
 
@@ -118,7 +116,7 @@ module Vector =
 
         let kernel = clContext.Compile(fillSubVectorKernel)
 
-        fun (processor: MailboxProcessor<_>) (leftVector: ClArray<'a option>) (maskVector: Sparse<'b>) (value: 'a) (resultVector: ClArray<'a option>) ->
+        fun (processor: RawCommandQueue) (leftVector: ClArray<'a option>) (maskVector: Sparse<'b>) (value: 'a) (resultVector: ClArray<'a option>) ->
 
             let ndRange =
                 Range1D.CreateValid(maskVector.NNZ, workGroupSize)
@@ -127,22 +125,20 @@ module Vector =
 
             let valueCell = clContext.CreateClCell(value)
 
-            processor.Post(
-                Msg.MsgSetArguments
-                    (fun () ->
-                        kernel.KernelFunc
-                            ndRange
-                            maskVector.NNZ
-                            leftVector
-                            maskVector.Indices
-                            maskVector.Values
-                            valueCell
-                            resultVector)
-            )
+            kernel.KernelFunc
+                ndRange
+                maskVector.NNZ
+                leftVector
+                maskVector.Indices
+                maskVector.Values
+                valueCell
+                resultVector
 
-            processor.Post(Msg.CreateRunMsg<_, _>(kernel))
 
-            valueCell.Free processor
+            processor.RunKernel kernel
+
+
+            valueCell.Free()
 
     let toSparse<'a when 'a: struct> (clContext: ClContext) workGroupSize =
 
@@ -164,7 +160,7 @@ module Vector =
         let allValues =
             Map.map (Map.optionToValueOrZero Unchecked.defaultof<'a>) clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (vector: ClArray<'a option>) ->
+        fun (processor: RawCommandQueue) allocationMode (vector: ClArray<'a option>) ->
 
             let positions = getBitmap processor DeviceOnly vector
 
@@ -181,7 +177,7 @@ module Vector =
 
             scatterIndices processor positions allIndices resultIndices
 
-            processor.Post <| Msg.CreateFreeMsg<_>(allIndices)
+            allIndices.Free()
 
             // compute result values
             let resultValues =
@@ -191,9 +187,65 @@ module Vector =
 
             scatterValues processor positions allValues resultValues
 
-            processor.Post <| Msg.CreateFreeMsg<_>(allValues)
+            allValues.Free()
 
-            processor.Post <| Msg.CreateFreeMsg<_>(positions)
+            positions.Free()
+
+            { Context = clContext
+              Indices = resultIndices
+              Values = resultValues
+              Size = vector.Length }
+
+    let toSparse2<'a when 'a: struct> (clContext: ClContext) workGroupSize =
+
+        let kernel =
+            <@ fun (ndRange: Range1D) (inputLength: int) (inputValues: ClArray<'a option>) (resultSize: ClCell<int>) (resultIndices: ClArray<int>) (resultValues: ClArray<'a>) ->
+
+                let gid = ndRange.GlobalID0
+
+                if gid < inputLength then
+                    match inputValues.[gid] with
+                    | Some v ->
+                        let offset = atomic (+) resultSize.Value 1
+                        resultIndices.[offset] <- gid
+                        resultValues.[offset] <- v
+                    | None -> () @>
+
+        let kernel = clContext.Compile kernel
+
+        let copy = ClArray.copy clContext workGroupSize
+        let copyValues = ClArray.copy clContext workGroupSize
+
+        fun (processor: RawCommandQueue) allocationMode (vector: ClArray<'a option>) ->
+
+            let tempIndices =
+                clContext.CreateClArrayWithSpecificAllocationMode<int>(DeviceOnly, vector.Length)
+
+            let tempValues =
+                clContext.CreateClArrayWithSpecificAllocationMode<'a>(DeviceOnly, vector.Length)
+
+            let resultLengthCell = clContext.CreateClCell<int>(0)
+
+            let ndRange =
+                Range1D.CreateValid(vector.Length, workGroupSize)
+
+            let kernel = kernel.GetKernel()
+
+            kernel.KernelFunc ndRange vector.Length vector resultLengthCell tempIndices tempValues
+
+            processor.RunKernel kernel
+
+            let resultLength =
+                resultLengthCell.ToHostAndFree(processor)
+
+            let resultIndices =
+                copy processor allocationMode tempIndices resultLength
+
+            let resultValues =
+                copyValues processor allocationMode tempValues resultLength
+
+            tempIndices.Free()
+            tempValues.Free()
 
             { Context = clContext
               Indices = resultIndices
@@ -208,13 +260,13 @@ module Vector =
         let reduce =
             Common.Reduce.reduce opAdd clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) (vector: ClArray<'a option>) ->
+        fun (processor: RawCommandQueue) (vector: ClArray<'a option>) ->
             choose processor DeviceOnly vector
             |> function
                 | Some values ->
                     let result = reduce processor values
 
-                    processor.Post(Msg.CreateFreeMsg<_>(values))
+                    values.Free()
 
                     result
                 | None -> clContext.CreateClCell Unchecked.defaultof<'a>
@@ -229,7 +281,7 @@ module Vector =
         let map =
             Backend.Common.Map.map <@ Some @> clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode size (elements: (int * 'a) list) ->
+        fun (processor: RawCommandQueue) allocationMode size (elements: (int * 'a) list) ->
             let indices, values = elements |> Array.ofList |> Array.unzip
 
             let values =
@@ -244,8 +296,8 @@ module Vector =
 
             scatter processor indices mappedValues result
 
-            processor.Post(Msg.CreateFreeMsg(mappedValues))
-            processor.Post(Msg.CreateFreeMsg(indices))
-            processor.Post(Msg.CreateFreeMsg(values))
+            mappedValues.Free()
+            indices.Free()
+            values.Free()
 
             result

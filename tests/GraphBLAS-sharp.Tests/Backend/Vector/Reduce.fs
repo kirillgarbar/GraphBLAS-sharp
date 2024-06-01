@@ -52,7 +52,7 @@ let testFixtures case =
     let context = case.TestContext.ClContext
     let q = case.TestContext.Queue
 
-    q.Error.Add(fun e -> failwithf "%A" e)
+    //q.Error.Add(fun e -> failwithf "%A" e)
 
     [ createTest<int> case (=) 0 (+) <@ (+) @> "add"
       createTest<byte> case (=) 0uy (+) <@ (+) @> "add"

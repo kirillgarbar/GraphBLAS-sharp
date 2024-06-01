@@ -9,6 +9,7 @@ open GraphBLAS.FSharp.Tests.TestCases
 open GraphBLAS.FSharp.Objects
 open GraphBLAS.FSharp.Objects.MatrixExtensions
 open GraphBLAS.FSharp.Backend.Quotes
+open Brahma.FSharp
 
 let config =
     { Utils.defaultConfig with
@@ -51,11 +52,11 @@ let makeTest testContext zero isEqual op kroneckerFun (leftMatrix: 'a [,], right
         let actual =
             Option.map (fun (m: ClMatrix<'a>) -> m.ToHost processor) result
 
-        m1.Dispose processor
-        m2.Dispose processor
+        m1.Dispose()
+        m2.Dispose()
 
         match result with
-        | Some m -> m.Dispose processor
+        | Some m -> m.Dispose()
         | _ -> ()
 
         // Check result
@@ -68,7 +69,7 @@ let createGeneralTest testContext (zero: 'a) isEqual op opQ testName =
     |> testPropertyWithConfig config $"test on %A{typeof<'a>} %s{testName}"
 
 let generalTests (testContext: TestContext) =
-    [ testContext.Queue.Error.Add(fun e -> failwithf "%A" e)
+    [ //testContext.Queue.Error.Add(fun e -> failwithf "%A" e)
 
       createGeneralTest testContext false (=) (&&) ArithmeticOperations.boolMulOption "mul"
       createGeneralTest testContext false (=) (||) ArithmeticOperations.boolSumOption "sum"

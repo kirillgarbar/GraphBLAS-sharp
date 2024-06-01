@@ -105,7 +105,7 @@ module internal ScanInternal =
 
         let preScan = clContext.Compile(preScan)
 
-        fun (processor: MailboxProcessor<_>) (inputArray: ClArray<'a>) (totalSum: ClCell<'a>) ->
+        fun (processor: RawCommandQueue) (inputArray: ClArray<'a>) (totalSum: ClCell<'a>) ->
             let numberOfGroups =
                 inputArray.Length / valuesPerBlock
                 + (if inputArray.Length % valuesPerBlock = 0 then
@@ -121,12 +121,9 @@ module internal ScanInternal =
 
             let preScanKernel = preScan.GetKernel()
 
-            processor.Post(
-                Msg.MsgSetArguments
-                    (fun () -> preScanKernel.KernelFunc ndRangePreScan inputArray.Length inputArray carry totalSum)
-            )
+            preScanKernel.KernelFunc ndRangePreScan inputArray.Length inputArray carry totalSum
 
-            processor.Post(Msg.CreateRunMsg<_, _>(preScanKernel))
+            processor.RunKernel preScanKernel
 
             carry, numberOfGroups > 1
 
@@ -150,7 +147,7 @@ module internal ScanInternal =
 
         let scan = clContext.Compile(scan)
 
-        fun (processor: MailboxProcessor<_>) (inputArray: ClArray<'a>) (carry: ClArray<'a>) (totalSum: ClCell<'a>) ->
+        fun (processor: RawCommandQueue) (inputArray: ClArray<'a>) (carry: ClArray<'a>) (totalSum: ClCell<'a>) ->
             let numberOfGroups =
                 inputArray.Length / valuesPerBlock
                 + (if inputArray.Length % valuesPerBlock = 0 then
@@ -163,11 +160,9 @@ module internal ScanInternal =
 
             let scan = scan.GetKernel()
 
-            processor.Post(
-                Msg.MsgSetArguments(fun () -> scan.KernelFunc ndRangeScan inputArray.Length inputArray carry totalSum)
-            )
+            scan.KernelFunc ndRangeScan inputArray.Length inputArray carry totalSum
 
-            processor.Post(Msg.CreateRunMsg<_, _>(scan))
+            processor.RunKernel scan
 
     let runExcludeInPlace plus zero (clContext: ClContext) workGroupSize =
 
@@ -190,7 +185,7 @@ module internal ScanInternal =
         let scan = scan plus false clContext workGroupSize
         let getTotalSum = clContext.Compile(getTotalSum)
 
-        fun (processor: MailboxProcessor<_>) (inputArray: ClArray<'a>) ->
+        fun (processor: RawCommandQueue) (inputArray: ClArray<'a>) ->
 
             let totalSum = clContext.CreateClCell<'a>()
 
@@ -198,17 +193,14 @@ module internal ScanInternal =
                 preScanSaveSum processor inputArray totalSum
 
             if not needRecursion then
-                carry.Free processor
+                carry.Free()
 
                 let ndRangeTotalSum = Range1D.CreateValid(1, 1)
                 let getTotalSum = getTotalSum.GetKernel()
 
-                processor.Post(
-                    Msg.MsgSetArguments
-                        (fun () -> getTotalSum.KernelFunc ndRangeTotalSum inputArray.Length inputArray totalSum)
-                )
+                getTotalSum.KernelFunc ndRangeTotalSum inputArray.Length inputArray totalSum
 
-                processor.Post(Msg.CreateRunMsg<_, _>(getTotalSum))
+                processor.RunKernel getTotalSum
             else
                 let mutable carryStack = [ carry; inputArray ]
                 let mutable stop = not needRecursion
@@ -223,7 +215,7 @@ module internal ScanInternal =
                         carryStack <- carry :: carryStack
                     else
                         stop <- true
-                        carry.Free processor
+                        carry.Free()
 
                 stop <- false
 
@@ -237,7 +229,7 @@ module internal ScanInternal =
                         else
                             scan processor inputCarry carry totalSum
 
-                        carry.Free processor
+                        carry.Free()
                         carryStack <- carryStack.Tail
                     | _ -> failwith "carryStack always has at least 2 elements"
 
@@ -265,6 +257,6 @@ module internal ScanInternal =
         let scan =
             runExcludeInPlace <@ (+) @> 0 clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) (inputArray: ClArray<int>) ->
+        fun (processor: RawCommandQueue) (inputArray: ClArray<int>) ->
 
             scan processor inputArray

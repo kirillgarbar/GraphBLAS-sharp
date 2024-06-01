@@ -39,8 +39,8 @@ let makeTest isEqual testFun (array: (uint * 'a * 'a) []) =
 
         testFun processor clPositions clValues clTarget
 
-        clPositions.Free processor
-        clValues.Free processor
+        clPositions.Free()
+        clValues.Free()
 
         let actual = clTarget.ToHostAndFree processor
 
@@ -81,7 +81,7 @@ let makeTestInit isEqual testFun indexMap (array: ('a * 'a) []) =
 
         testFun processor clValues clTarget
 
-        clValues.Free processor
+        clValues.Free()
 
         let actual = clTarget.ToHostAndFree processor
 

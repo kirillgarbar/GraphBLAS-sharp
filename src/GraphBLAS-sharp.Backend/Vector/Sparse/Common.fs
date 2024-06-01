@@ -12,7 +12,7 @@ module internal Common =
     let setPositions<'a when 'a: struct> (clContext: ClContext) workGroupSize =
 
         let sum =
-            Common.PrefixSum.standardExcludeInPlace clContext workGroupSize
+            Common.ScanInternal.standardExcludeInPlace clContext workGroupSize
 
         let valuesScatter =
             Common.Scatter.lastOccurrence clContext workGroupSize
@@ -20,7 +20,7 @@ module internal Common =
         let indicesScatter =
             Common.Scatter.lastOccurrence clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (allValues: ClArray<'a>) (allIndices: ClArray<int>) (positions: ClArray<int>) ->
+        fun (processor: RawCommandQueue) allocationMode (allValues: ClArray<'a>) (allIndices: ClArray<int>) (positions: ClArray<int>) ->
 
             let resultLength =
                 (sum processor positions).ToHostAndFree(processor)
@@ -40,7 +40,7 @@ module internal Common =
     let setPositionsOption<'a when 'a: struct> (clContext: ClContext) workGroupSize =
 
         let sum =
-            Common.PrefixSum.standardExcludeInPlace clContext workGroupSize
+            Common.ScanInternal.standardExcludeInPlace clContext workGroupSize
 
         let valuesScatter =
             Common.Scatter.lastOccurrence clContext workGroupSize
@@ -48,7 +48,7 @@ module internal Common =
         let indicesScatter =
             Common.Scatter.lastOccurrence clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (allValues: ClArray<'a>) (allIndices: ClArray<int>) (positions: ClArray<int>) ->
+        fun (processor: RawCommandQueue) allocationMode (allValues: ClArray<'a>) (allIndices: ClArray<int>) (positions: ClArray<int>) ->
 
             let resultLength =
                 (sum processor positions).ToHostAndFree(processor)
@@ -77,7 +77,7 @@ module internal Common =
         let mapIndices =
             Common.Map.mapWithValue clContext workGroupSize <@ fun x y -> x + y @>
 
-        fun (processor: MailboxProcessor<_>) allocationMode (vectors: Sparse<'a> seq) ->
+        fun (processor: RawCommandQueue) allocationMode (vectors: Sparse<'a> seq) ->
 
             let vectorIndices, _ =
                 vectors

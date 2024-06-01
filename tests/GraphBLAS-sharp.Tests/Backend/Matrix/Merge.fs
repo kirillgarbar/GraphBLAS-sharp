@@ -68,8 +68,8 @@ let makeTestCOO isEqual zero testFun (leftArray: 'a [,], rightArray: 'a [,]) =
              (clIsLeft: ClArray<int>)) =
             testFun processor clLeftMatrix clRightMatrix
 
-        clLeftMatrix.Dispose processor
-        clRightMatrix.Dispose processor
+        clLeftMatrix.Dispose()
+        clRightMatrix.Dispose()
 
         let leftValues = clLeftValues.ToHostAndFree processor
         let rightValues = clRightValues.ToHostAndFree processor
@@ -131,8 +131,8 @@ let makeTestCOODisjoint isEqual zero testFun (array: ('a * 'a) [,]) =
 
         let actual = actual.ToHostAndFree processor
 
-        clLeftMatrix.Dispose processor
-        clRightMatrix.Dispose processor
+        clLeftMatrix.Dispose()
+        clRightMatrix.Dispose()
 
         rightArray
         |> Array2D.iteri
@@ -185,12 +185,12 @@ let makeTestCSR isEqual zero testFun (leftArray: 'a [,], rightArray: 'a [,]) =
              (clIsLeft: ClArray<int>)) =
             testFun processor clLeftMatrix clRightMatrix
 
-        clLeftMatrix.Dispose processor
-        clRightMatrix.Dispose processor
+        clLeftMatrix.Dispose()
+        clRightMatrix.Dispose()
 
         let leftValues = clLeftValues.ToHostAndFree processor
         let rightValues = clRightValues.ToHostAndFree processor
-        clIsEndOfRow.Free processor
+        clIsEndOfRow.Free()
         let isLeft = clIsLeft.ToHostAndFree processor
 
         let actualValues =

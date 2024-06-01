@@ -27,7 +27,7 @@ let makeTest<'a when 'a: equality> replicateFun (array: array<'a>) i =
             (replicateFun q HostInterop clArray i: ClArray<'a>)
                 .ToHostAndFree q
 
-        clArray.Free q
+        clArray.Free()
 
         logger.debug (
             eventX $"Actual is {actual}"
@@ -46,7 +46,7 @@ let createTest<'a when 'a: equality> =
     |> testPropertyWithConfig config $"Correctness test on random %A{typeof<'a>} arrays"
 
 let testCases =
-    q.Error.Add(fun e -> failwithf "%A" e)
+    //q.Error.Add(fun e -> failwithf "%A" e)
 
     [ createTest<int>
       createTest<bool>

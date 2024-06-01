@@ -7,7 +7,6 @@ open GraphBLAS.FSharp.IO
 open Brahma.FSharp
 open Microsoft.FSharp.Core
 open GraphBLAS.FSharp.Objects.ArraysExtensions
-open GraphBLAS.FSharp.Objects.MailboxProcessorExtensions
 open GraphBLAS.FSharp.Benchmarks
 open GraphBLAS.FSharp.Objects
 
@@ -40,7 +39,7 @@ type Benchmarks(
 
     member this.Processor =
         let p = (fst this.OclContextInfo).Queue
-        p.Error.Add(fun e -> failwithf "%A" e)
+        //p.Error.Add(fun e -> failwithf "%A" e)
         p
 
     static member AvailableContexts = Utils.availableContexts
@@ -69,12 +68,12 @@ type Benchmarks(
         this.Result <- this.FunToBenchmark this.Processor matrixPrepared Constants.PageRank.accuracy
 
     member this.ClearInputMatrix() =
-        matrix.Dispose this.Processor
+        matrix.Dispose()
 
     member this.ClearPreparedMatrix() =
-        matrixPrepared.Dispose this.Processor
+        matrixPrepared.Dispose()
 
-    member this.ClearResult() = this.Result.Dispose this.Processor
+    member this.ClearResult() = this.Result.Dispose()
 
     member this.ReadMatrix() =
         let converter =
@@ -113,15 +112,15 @@ type PageRankWithoutTransferBenchmarkFloat32() =
     override this.GlobalSetup() =
         this.ReadMatrix()
         this.LoadMatrixToGPU()
-        finish this.Processor
+        this.Processor.Synchronize()
         this.PrepareMatrix()
         this.ClearInputMatrix()
-        finish this.Processor
+        this.Processor.Synchronize()
 
     [<IterationCleanup>]
     override this.IterationCleanup() =
         this.ClearResult()
-        finish this.Processor
+        this.Processor.Synchronize()
 
     [<GlobalCleanup>]
     override this.GlobalCleanup() =
@@ -130,4 +129,4 @@ type PageRankWithoutTransferBenchmarkFloat32() =
     [<Benchmark>]
     override this.Benchmark() =
         this.PageRank()
-        finish this.Processor
+        this.Processor.Synchronize()

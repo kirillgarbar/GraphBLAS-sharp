@@ -34,8 +34,8 @@ let makeTest isEqual zero testFun (firstArray: 'a []) (secondArray: 'a []) =
              (isLeftBitmap: ClArray<int>)) =
             testFun processor clFirstVector clSecondVector
 
-        clFirstVector.Dispose processor
-        clSecondVector.Dispose processor
+        clFirstVector.Dispose()
+        clSecondVector.Dispose()
 
         let actualIndices = allIndices.ToHostAndFree processor
         let actualFirstValues = firstValues.ToHostAndFree processor

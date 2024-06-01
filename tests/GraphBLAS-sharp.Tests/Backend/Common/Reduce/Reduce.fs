@@ -19,7 +19,7 @@ let wgSize = Constants.Common.defaultWorkGroupSize
 
 let q = Context.defaultContext.Queue
 
-let makeTest (reduce: MailboxProcessor<_> -> ClArray<'a> -> ClCell<'a>) plus zero (array: 'a []) =
+let makeTest (reduce: RawCommandQueue -> ClArray<'a> -> ClCell<'a>) plus zero (array: 'a []) =
 
     if array.Length > 0 then
         let reduce = reduce q
@@ -33,7 +33,7 @@ let makeTest (reduce: MailboxProcessor<_> -> ClArray<'a> -> ClCell<'a>) plus zer
             let clArray = context.CreateClArray array
             let total = reduce clArray
 
-            clArray.Free q
+            clArray.Free()
             total.ToHostAndFree q
 
         logger.debug (
@@ -59,7 +59,7 @@ let testFixtures plus plusQ zero name =
     |> testPropertyWithConfig config $"Correctness on %s{name}"
 
 let tests =
-    q.Error.Add(fun e -> failwithf "%A" e)
+    //q.Error.Add(fun e -> failwithf "%A" e)
 
     [ testFixtures (+) <@ (+) @> 0 "int add"
       testFixtures (+) <@ (+) @> 0uy "byte add"

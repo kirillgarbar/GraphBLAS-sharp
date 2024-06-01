@@ -20,7 +20,7 @@ module internal Expand =
         let prefixSum =
             Common.PrefixSum.standardExcludeInPlace clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) (leftMatrixColumns: ClArray<int>) (rightMatrixRowsLengths: ClArray<int>) ->
+        fun (processor: RawCommandQueue) (leftMatrixColumns: ClArray<int>) (rightMatrixRowsLengths: ClArray<int>) ->
 
             let segmentsLengths =
                 clContext.CreateClArrayWithSpecificAllocationMode(DeviceOnly, leftMatrixColumns.Length)
@@ -31,7 +31,7 @@ module internal Expand =
             // compute pointers
             let length =
                 (prefixSum processor segmentsLengths)
-                    .ToHostAndFree processor
+                    .ToHostAndFree(processor)
 
             length, segmentsLengths
 
@@ -48,7 +48,7 @@ module internal Expand =
         let scatter =
             Common.Scatter.lastOccurrence clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) (firstValues: ClArray<'a>) (secondValues: ClArray<'b>) (columns: ClArray<int>) (rows: ClArray<int>) ->
+        fun (processor: RawCommandQueue) (firstValues: ClArray<'a>) (secondValues: ClArray<'b>) (columns: ClArray<int>) (rows: ClArray<int>) ->
 
             let positions =
                 getBitmap processor DeviceOnly firstValues secondValues
@@ -58,7 +58,7 @@ module internal Expand =
                     .ToHostAndFree(processor)
 
             if resultLength = 0 then
-                positions.Free processor
+                positions.Free()
 
                 None
             else
@@ -77,7 +77,7 @@ module internal Expand =
 
                 assignValues processor firstValues secondValues positions resultValues
 
-                positions.Free processor
+                positions.Free()
 
                 Some(resultValues, resultColumns, resultRows)
 
@@ -112,14 +112,14 @@ module internal Expand =
         let rightMatrixGather =
             Common.Gather.run clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) (lengths: int) (segmentsPointers: ClArray<int>) (leftMatrix: ClMatrix.COO<'a>) (rightMatrix: ClMatrix.CSR<'b>) ->
+        fun (processor: RawCommandQueue) (lengths: int) (segmentsPointers: ClArray<int>) (leftMatrix: ClMatrix.COO<'a>) (rightMatrix: ClMatrix.CSR<'b>) ->
             // Compute left matrix positions
             let leftMatrixPositions = zeroCreate processor DeviceOnly lengths
 
             idScatter processor segmentsPointers leftMatrixPositions
 
             (maxPrefixSum processor leftMatrixPositions 0)
-                .Free processor
+                .Free()
 
             // Compute right matrix positions
             let rightMatrixPositions = create processor DeviceOnly lengths 1
@@ -131,7 +131,7 @@ module internal Expand =
 
             scatter processor segmentsPointers requiredRightMatrixPointers rightMatrixPositions
 
-            requiredRightMatrixPointers.Free processor
+            requiredRightMatrixPointers.Free()
 
             // another way to get offsets ???
             let offsets =
@@ -139,7 +139,7 @@ module internal Expand =
 
             segmentPrefixSum processor offsets.Length rightMatrixPositions leftMatrixPositions offsets
 
-            offsets.Free processor
+            offsets.Free()
 
             // compute columns
             let columns =
@@ -158,7 +158,7 @@ module internal Expand =
 
             leftMatrixGather processor leftMatrixPositions leftMatrix.Values leftMatrixValues
 
-            leftMatrixPositions.Free processor
+            leftMatrixPositions.Free()
 
             // compute right matrix values
             let rightMatrixValues =
@@ -166,7 +166,7 @@ module internal Expand =
 
             rightMatrixGather processor rightMatrixPositions rightMatrix.Values rightMatrixValues
 
-            rightMatrixPositions.Free processor
+            rightMatrixPositions.Free()
 
             // left, right matrix values, columns and rows indices
             leftMatrixValues, rightMatrixValues, columns, rows
@@ -182,7 +182,7 @@ module internal Expand =
         let sortKeys =
             Common.Sort.Radix.standardRunKeysOnly clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) (values: ClArray<'a>) (columns: ClArray<int>) (rows: ClArray<int>) ->
+        fun (processor: RawCommandQueue) (values: ClArray<'a>) (columns: ClArray<int>) (rows: ClArray<int>) ->
             // sort by columns
             let valuesSortedByColumns =
                 sortByKeyValues processor DeviceOnly columns values
@@ -201,9 +201,9 @@ module internal Expand =
 
             let sortedRows = sortKeys processor rowsSortedByColumns
 
-            valuesSortedByColumns.Free processor
-            rowsSortedByColumns.Free processor
-            sortedColumns.Free processor
+            valuesSortedByColumns.Free()
+            rowsSortedByColumns.Free()
+            sortedColumns.Free()
 
             valuesSortedByRows, columnsSortedByRows, sortedRows
 
@@ -221,26 +221,26 @@ module internal Expand =
         let idScatter =
             Common.Scatter.initFirstOccurrence Map.id clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (values: ClArray<'a>) (columns: ClArray<int>) (rows: ClArray<int>) ->
+        fun (processor: RawCommandQueue) allocationMode (values: ClArray<'a>) (columns: ClArray<int>) (rows: ClArray<int>) ->
 
             let bitmap =
                 getUniqueBitmap processor DeviceOnly columns rows
 
             let uniqueKeysCount =
                 (prefixSum processor bitmap)
-                    .ToHostAndFree processor
+                    .ToHostAndFree(processor)
 
             let offsets =
                 clContext.CreateClArrayWithSpecificAllocationMode(DeviceOnly, uniqueKeysCount)
 
             idScatter processor bitmap offsets
 
-            bitmap.Free processor
+            bitmap.Free()
 
             let reduceResult =
                 reduce processor allocationMode uniqueKeysCount offsets columns rows values
 
-            offsets.Free processor
+            offsets.Free()
 
             // reducedValues, reducedColumns, reducedRows option
             reduceResult
@@ -259,13 +259,13 @@ module internal Expand =
 
         let reduce = reduce opAdd clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (rightMatrixRowsNNZ: ClArray<int>) (rightMatrix: ClMatrix.CSR<'b>) (leftMatrix: ClMatrix.COO<'a>) ->
+        fun (processor: RawCommandQueue) allocationMode (rightMatrixRowsNNZ: ClArray<int>) (rightMatrix: ClMatrix.CSR<'b>) (leftMatrix: ClMatrix.COO<'a>) ->
 
             let length, segmentPointers =
                 getSegmentPointers processor leftMatrix.Columns rightMatrixRowsNNZ
 
             if length = 0 then
-                segmentPointers.Free processor
+                segmentPointers.Free()
 
                 length, None
             else
@@ -273,16 +273,16 @@ module internal Expand =
                 let leftMatrixValues, rightMatrixValues, columns, rows =
                     expand processor length segmentPointers leftMatrix rightMatrix
 
-                segmentPointers.Free processor
+                segmentPointers.Free()
 
                 // multiply
                 let mulResult =
                     multiply processor leftMatrixValues rightMatrixValues columns rows
 
-                leftMatrixValues.Free processor
-                rightMatrixValues.Free processor
-                columns.Free processor
-                rows.Free processor
+                leftMatrixValues.Free()
+                rightMatrixValues.Free()
+                columns.Free()
+                rows.Free()
 
                 let result =
                     mulResult
@@ -292,17 +292,17 @@ module internal Expand =
                             let sortedValues, sortedColumns, sortedRows =
                                 sort processor resultValues resultColumns resultRows
 
-                            resultValues.Free processor
-                            resultColumns.Free processor
-                            resultRows.Free processor
+                            resultValues.Free()
+                            resultColumns.Free()
+                            resultRows.Free()
 
                             // addition
                             let reduceResult =
                                 reduce processor allocationMode sortedValues sortedColumns sortedRows
 
-                            sortedValues.Free processor
-                            sortedColumns.Free processor
-                            sortedRows.Free processor
+                            sortedValues.Free()
+                            sortedColumns.Free()
+                            sortedRows.Free()
 
                             reduceResult)
 
@@ -316,7 +316,7 @@ module internal Expand =
         let expandRowPointers =
             CSR.Matrix.expandRowPointers clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (leftMatrix: ClMatrix.CSR<'a>) rightMatrixRowsNNZ (rightMatrix: ClMatrix.CSR<'b>) ->
+        fun (processor: RawCommandQueue) allocationMode (leftMatrix: ClMatrix.CSR<'a>) rightMatrixRowsNNZ (rightMatrix: ClMatrix.CSR<'b>) ->
 
             let rows =
                 expandRowPointers processor DeviceOnly leftMatrix
@@ -332,7 +332,7 @@ module internal Expand =
             let _, result =
                 runCOO processor allocationMode rightMatrixRowsNNZ rightMatrix leftMatrixCOO
 
-            rows.Free processor
+            rows.Free()
 
             result
             |> Option.map
@@ -360,7 +360,7 @@ module internal Expand =
         let runCOO =
             runCOO opAdd opMul clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode maxAllocSize generalLength (leftMatrix: ClMatrix.CSR<'a>) segmentLengths rightMatrixRowsNNZ (rightMatrix: ClMatrix.CSR<'b>) ->
+        fun (processor: RawCommandQueue) allocationMode maxAllocSize generalLength (leftMatrix: ClMatrix.CSR<'a>) segmentLengths rightMatrixRowsNNZ (rightMatrix: ClMatrix.CSR<'b>) ->
             // extract segment lengths by left matrix rows pointers
             let segmentPointersByLeftMatrixRows =
                 clContext.CreateClArrayWithSpecificAllocationMode(DeviceOnly, leftMatrix.RowPointers.Length)
@@ -386,11 +386,11 @@ module internal Expand =
 
                     // find largest row that fit into maxAllocSize
                     let upperBound =
-                        (upperBound currentBound).ToHostAndFree processor
+                        (upperBound currentBound).ToHostAndFree(processor)
 
                     let endRow = upperBound - 2
 
-                    currentBound.Free processor
+                    currentBound.Free()
 
                     // TODO(handle largest rows)
                     // (we can split row, multiply and merge them but merge path needed)
@@ -416,7 +416,7 @@ module internal Expand =
 
             let result = helper 0 0 [] |> List.rev
 
-            segmentPointersByLeftMatrixRows.Free processor
+            segmentPointersByLeftMatrixRows.Free()
 
             result
 
@@ -438,7 +438,7 @@ module internal Expand =
         let runManySteps =
             runManySteps opAdd opMul clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode maxAllocSize (leftMatrix: ClMatrix.CSR<'a>) (rightMatrix: ClMatrix.CSR<'b>) ->
+        fun (processor: RawCommandQueue) allocationMode maxAllocSize (leftMatrix: ClMatrix.CSR<'a>) (rightMatrix: ClMatrix.CSR<'b>) ->
 
             let rightMatrixRowsNNZ =
                 getNNZInRows processor DeviceOnly rightMatrix
@@ -449,7 +449,7 @@ module internal Expand =
             if generalLength = 0 then
                 None
             elif generalLength < maxAllocSize then
-                segmentLengths.Free processor
+                segmentLengths.Free()
 
                 runOneStep processor allocationMode leftMatrix rightMatrixRowsNNZ rightMatrix
             else
@@ -464,8 +464,8 @@ module internal Expand =
                         rightMatrixRowsNNZ
                         rightMatrix
 
-                rightMatrixRowsNNZ.Free processor
-                segmentLengths.Free processor
+                rightMatrixRowsNNZ.Free()
+                segmentLengths.Free()
 
                 match result with
                 | _ :: _ ->
@@ -482,13 +482,12 @@ module internal Expand =
                     // TODO(overhead: compute result length 3 time)
                     // release resources
                     valuesList
-                    |> List.iter (fun array -> array.Free processor)
+                    |> List.iter (fun array -> array.Free())
 
                     columnsList
-                    |> List.iter (fun array -> array.Free processor)
+                    |> List.iter (fun array -> array.Free())
 
-                    rowsList
-                    |> List.iter (fun array -> array.Free processor)
+                    rowsList |> List.iter (fun array -> array.Free())
 
                     { Context = clContext
                       RowCount = leftMatrix.RowCount
@@ -505,7 +504,7 @@ module internal Expand =
             let runCOO =
                 runCOO opAdd opMul clContext workGroupSize
 
-            fun (processor: MailboxProcessor<_>) allocationMode (leftMatrix: ClMatrix.COO<'a>) rightMatrixRowsNNZ (rightMatrix: ClMatrix.CSR<'b>) ->
+            fun (processor: RawCommandQueue) allocationMode (leftMatrix: ClMatrix.COO<'a>) rightMatrixRowsNNZ (rightMatrix: ClMatrix.CSR<'b>) ->
 
                 let _, result =
                     runCOO processor allocationMode rightMatrixRowsNNZ rightMatrix leftMatrix
@@ -539,7 +538,7 @@ module internal Expand =
             let runCOO =
                 runCOO opAdd opMul clContext workGroupSize
 
-            fun (processor: MailboxProcessor<_>) allocationMode maxAllocSize generalLength (leftMatrix: ClMatrix.COO<'a>) segmentLengths rightMatrixRowsNNZ (rightMatrix: ClMatrix.CSR<'b>) ->
+            fun (processor: RawCommandQueue) allocationMode maxAllocSize generalLength (leftMatrix: ClMatrix.COO<'a>) segmentLengths rightMatrixRowsNNZ (rightMatrix: ClMatrix.CSR<'b>) ->
 
                 let leftRowPointers =
                     compress processor allocationMode leftMatrix.Rows leftMatrix.RowCount
@@ -569,11 +568,11 @@ module internal Expand =
 
                         // find largest row that fit into maxAllocSize
                         let upperBound =
-                            (upperBound currentBound).ToHostAndFree processor
+                            (upperBound currentBound).ToHostAndFree(processor)
 
                         let endRow = upperBound - 2
 
-                        currentBound.Free processor
+                        currentBound.Free()
 
                         // TODO(handle largest rows)
                         // (we can split row, multiply and merge them but merge path needed)
@@ -599,7 +598,7 @@ module internal Expand =
 
                 let result = helper 0 0 [] |> List.rev
 
-                segmentPointersByLeftMatrixRows.Free processor
+                segmentPointersByLeftMatrixRows.Free()
 
                 result
 
@@ -621,7 +620,7 @@ module internal Expand =
             let runManySteps =
                 runManySteps opAdd opMul clContext workGroupSize
 
-            fun (processor: MailboxProcessor<_>) allocationMode maxAllocSize (leftMatrix: ClMatrix.COO<'a>) (rightMatrix: ClMatrix.CSR<'b>) ->
+            fun (processor: RawCommandQueue) allocationMode maxAllocSize (leftMatrix: ClMatrix.COO<'a>) (rightMatrix: ClMatrix.CSR<'b>) ->
 
                 let rightMatrixRowsNNZ =
                     getNNZInRows processor DeviceOnly rightMatrix
@@ -632,7 +631,7 @@ module internal Expand =
                 if generalLength = 0 then
                     None
                 elif generalLength < maxAllocSize then
-                    segmentLengths.Free processor
+                    segmentLengths.Free()
 
                     runOneStep processor allocationMode leftMatrix rightMatrixRowsNNZ rightMatrix
                 else
@@ -647,8 +646,8 @@ module internal Expand =
                             rightMatrixRowsNNZ
                             rightMatrix
 
-                    rightMatrixRowsNNZ.Free processor
-                    segmentLengths.Free processor
+                    rightMatrixRowsNNZ.Free()
+                    segmentLengths.Free()
 
                     match result with
                     | _ :: _ ->
@@ -665,13 +664,12 @@ module internal Expand =
                         // TODO(overhead: compute result length 3 time)
                         // release resources
                         valuesList
-                        |> List.iter (fun array -> array.Free processor)
+                        |> List.iter (fun array -> array.Free())
 
                         columnsList
-                        |> List.iter (fun array -> array.Free processor)
+                        |> List.iter (fun array -> array.Free())
 
-                        rowsList
-                        |> List.iter (fun array -> array.Free processor)
+                        rowsList |> List.iter (fun array -> array.Free())
 
                         { Context = clContext
                           RowCount = leftMatrix.RowCount

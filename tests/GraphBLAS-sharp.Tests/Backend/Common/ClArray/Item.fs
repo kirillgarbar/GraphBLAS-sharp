@@ -24,7 +24,7 @@ let makeTest<'a when 'a: equality> testFun (array: 'a [], position) =
 
         let result: ClCell<'a> = testFun processor position clArray
 
-        clArray.Free processor
+        clArray.Free()
         let actual = result.ToHost processor
 
         let expected = Array.item position array

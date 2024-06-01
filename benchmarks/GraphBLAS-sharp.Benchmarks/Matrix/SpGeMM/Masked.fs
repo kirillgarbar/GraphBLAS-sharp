@@ -8,7 +8,6 @@ open Brahma.FSharp
 open GraphBLAS.FSharp
 open GraphBLAS.FSharp.Objects
 open GraphBLAS.FSharp.Objects.ClContextExtensions
-open GraphBLAS.FSharp.Objects.MailboxProcessorExtensions
 open GraphBLAS.FSharp.Benchmarks
 
 [<AbstractClass>]
@@ -46,7 +45,7 @@ type Masked<'elem when 'elem : struct>(
 
     member this.Processor =
         let p = (fst this.OclContextInfo).Queue
-        p.Error.Add(fun e -> failwithf "%A" e)
+        //p.Error.Add(fun e -> failwithf "%A" e)
         p
 
     static member AvaliableContexts = Utils.availableContexts
@@ -101,12 +100,12 @@ type Masked<'elem when 'elem : struct>(
         this.ResultMatrix <- this.FunToBenchmark this.Processor firstMatrix secondMatrix mask
 
     member this.ClearInputMatrices() =
-        firstMatrix.Dispose this.Processor
-        secondMatrix.Dispose this.Processor
-        mask.Dispose this.Processor
+        firstMatrix.Dispose()
+        secondMatrix.Dispose()
+        mask.Dispose()
 
     member this.ClearResult() =
-        this.ResultMatrix.Dispose this.Processor
+        this.ResultMatrix.Dispose()
 
     member this.ReadMask(maskReader) =
         maskHost <- Matrix.COO <| this.ReadMatrix maskReader
@@ -153,17 +152,17 @@ type MxmBenchmarksMultiplicationOnly<'elem when 'elem : struct>(
         this.ReadMatrices ()
         this.LoadMatricesToGPU ()
         this.ConvertSecondMatrixToCSC()
-        finish this.Processor
+        this.Processor.Synchronize()
 
     [<Benchmark>]
     override this.Benchmark () =
         this.Mxm()
-        finish this.Processor
+        this.Processor.Synchronize()
 
     [<IterationCleanup>]
     override this.IterationCleanup () =
         this.ClearResult()
-        finish this.Processor
+        this.Processor.Synchronize()
 
     [<GlobalCleanup>]
     override this.GlobalCleanup () =
@@ -185,20 +184,20 @@ type MxmBenchmarksWithTransposing<'elem when 'elem : struct>(
     override this.GlobalSetup() =
         this.ReadMatrices()
         this.LoadMatricesToGPU ()
-        finish this.Processor
+        this.Processor.Synchronize()
 
     [<Benchmark>]
     override this.Benchmark() =
         this.ConvertSecondMatrixToCSC()
         this.Mxm()
-        finish this.Processor
+        this.Processor.Synchronize()
 
 
     [<IterationCleanup>]
     override this.IterationCleanup() =
         this.ClearResult()
         this.ConvertSecondMatrixToCSR()
-        finish this.Processor
+        this.Processor.Synchronize()
 
     [<GlobalCleanup>]
     override this.GlobalCleanup() =

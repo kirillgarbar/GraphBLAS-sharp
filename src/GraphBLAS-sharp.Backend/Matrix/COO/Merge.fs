@@ -132,7 +132,7 @@ module Merge =
 
         let kernel = clContext.Compile(merge)
 
-        fun (processor: MailboxProcessor<_>) (leftMatrix: ClMatrix.COO<'a>) (rightMatrix: ClMatrix.COO<'b>) ->
+        fun (processor: RawCommandQueue) (leftMatrix: ClMatrix.COO<'a>) (rightMatrix: ClMatrix.COO<'b>) ->
 
             let firstSide = leftMatrix.Columns.Length
             let secondSide = rightMatrix.Columns.Length
@@ -158,28 +158,24 @@ module Merge =
 
             let kernel = kernel.GetKernel()
 
-            processor.Post(
-                Msg.MsgSetArguments
-                    (fun () ->
-                        kernel.KernelFunc
-                            ndRange
-                            firstSide
-                            secondSide
-                            sumOfSides
-                            leftMatrix.Rows
-                            leftMatrix.Columns
-                            leftMatrix.Values
-                            rightMatrix.Rows
-                            rightMatrix.Columns
-                            rightMatrix.Values
-                            allRows
-                            allColumns
-                            leftMergedValues
-                            rightMergedValues
-                            isLeft)
-            )
+            kernel.KernelFunc
+                ndRange
+                firstSide
+                secondSide
+                sumOfSides
+                leftMatrix.Rows
+                leftMatrix.Columns
+                leftMatrix.Values
+                rightMatrix.Rows
+                rightMatrix.Columns
+                rightMatrix.Values
+                allRows
+                allColumns
+                leftMergedValues
+                rightMergedValues
+                isLeft
 
-            processor.Post(Msg.CreateRunMsg<_, _>(kernel))
+            processor.RunKernel kernel
 
             allRows, allColumns, leftMergedValues, rightMergedValues, isLeft
 
@@ -199,7 +195,7 @@ module Merge =
 
         let merge = run clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) (leftMatrix: ClMatrix.COO<'a>) (rightMatrix: ClMatrix.COO<'a>) ->
+        fun (processor: RawCommandQueue) (leftMatrix: ClMatrix.COO<'a>) (rightMatrix: ClMatrix.COO<'a>) ->
 
             let length =
                 leftMatrix.Columns.Length
@@ -212,14 +208,12 @@ module Merge =
 
             let mergeValuesKernel = mergeValuesKernel.GetKernel()
 
-            processor.Post(
-                Msg.MsgSetArguments(fun () -> mergeValuesKernel.KernelFunc ndRange length leftValues rightValues isLeft)
-            )
+            mergeValuesKernel.KernelFunc ndRange length leftValues rightValues isLeft
 
-            processor.Post(Msg.CreateRunMsg<_, _>(mergeValuesKernel))
+            processor.RunKernel(mergeValuesKernel)
 
-            isLeft.Free processor
-            rightValues.Free processor
+            isLeft.Free()
+            rightValues.Free()
 
             { Context = clContext
               Rows = rows

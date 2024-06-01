@@ -76,11 +76,11 @@ let testFixtures (testContext: TestContext) =
               let resHostSparse = resSparse.ToHost queue
               let resHostPushPull = resPushPull.ToHost queue
 
-              matrix.Dispose queue
-              matrixBool.Dispose queue
-              res.Dispose queue
-              resSparse.Dispose queue
-              resPushPull.Dispose queue
+              matrix.Dispose()
+              matrixBool.Dispose()
+              res.Dispose()
+              resSparse.Dispose()
+              resPushPull.Dispose()
 
               match resHost, resHostSparse, resHostPushPull with
               | Vector.Dense resHost, Vector.Dense resHostSparse, Vector.Dense resHostPushPull ->

@@ -19,26 +19,26 @@ NUGET
       System.Reflection.Emit.Lightweight (>= 4.7) - restriction: && (< net6.0) (>= netstandard2.0)
       System.Threading.Tasks.Extensions (>= 4.5.4) - restriction: && (< net6.0) (>= netstandard2.0)
     BenchmarkDotNet.Annotations (0.13.9) - restriction: >= netstandard2.0
-    Brahma.FSharp (2.0.5)
-      Brahma.FSharp.OpenCL.Printer (>= 2.0.5) - restriction: >= net7.0
-      Brahma.FSharp.OpenCL.Shared (>= 2.0.5) - restriction: >= net7.0
-      Brahma.FSharp.OpenCL.Translator (>= 2.0.5) - restriction: >= net7.0
+    Brahma.FSharp (3.0.0-alpha1.5)
+      Brahma.FSharp.OpenCL.Printer (>= 3.0.0-alpha1.5) - restriction: >= net7.0
+      Brahma.FSharp.OpenCL.Shared (>= 3.0.0-alpha1.5) - restriction: >= net7.0
+      Brahma.FSharp.OpenCL.Translator (>= 3.0.0-alpha1.5) - restriction: >= net7.0
       FSharp.Core (7.0) - restriction: >= net7.0
       FSharp.Quotations.Evaluator (>= 2.1) - restriction: >= net7.0
-      YC.OpenCL.NET (>= 2.0.5) - restriction: >= net7.0
-    Brahma.FSharp.OpenCL.AST (2.0.5) - restriction: >= net7.0
+      YC.OpenCL.NET (>= 3.0.0-alpha1.5) - restriction: >= net7.0
+    Brahma.FSharp.OpenCL.AST (3.0.0-alpha1.5) - restriction: >= net7.0
       FSharp.Core (7.0) - restriction: >= net7.0
-    Brahma.FSharp.OpenCL.Printer (2.0.5) - restriction: >= net7.0
-      Brahma.FSharp.OpenCL.AST (>= 2.0.5) - restriction: >= net7.0
-      Brahma.FSharp.OpenCL.Translator (>= 2.0.5) - restriction: >= net7.0
+    Brahma.FSharp.OpenCL.Printer (3.0.0-alpha1.5) - restriction: >= net7.0
+      Brahma.FSharp.OpenCL.AST (>= 3.0.0-alpha1.5) - restriction: >= net7.0
+      Brahma.FSharp.OpenCL.Translator (>= 3.0.0-alpha1.5) - restriction: >= net7.0
       FSharp.Core (7.0) - restriction: >= net7.0
       FSharpx.Collections (>= 3.1) - restriction: >= net7.0
       FSharpx.Text.StructuredFormat (>= 3.1) - restriction: >= net7.0
-    Brahma.FSharp.OpenCL.Shared (2.0.5) - restriction: >= net7.0
-      YC.OpenCL.NET (>= 2.0.5) - restriction: >= net7.0
-    Brahma.FSharp.OpenCL.Translator (2.0.5) - restriction: >= net7.0
-      Brahma.FSharp.OpenCL.AST (>= 2.0.5) - restriction: >= net7.0
-      Brahma.FSharp.OpenCL.Shared (>= 2.0.5) - restriction: >= net7.0
+    Brahma.FSharp.OpenCL.Shared (3.0.0-alpha1.5) - restriction: >= net7.0
+      YC.OpenCL.NET (>= 3.0.0-alpha1.5) - restriction: >= net7.0
+    Brahma.FSharp.OpenCL.Translator (3.0.0-alpha1.5) - restriction: >= net7.0
+      Brahma.FSharp.OpenCL.AST (>= 3.0.0-alpha1.5) - restriction: >= net7.0
+      Brahma.FSharp.OpenCL.Shared (>= 3.0.0-alpha1.5) - restriction: >= net7.0
       FSharp.Core (7.0) - restriction: >= net7.0
       FSharp.Quotations.Evaluator (>= 2.1) - restriction: >= net7.0
       FSharpx.Collections (>= 3.1) - restriction: >= net7.0

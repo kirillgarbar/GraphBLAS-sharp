@@ -24,7 +24,7 @@ module Bitmap =
 
         let kernel = clContext.Compile(getUniqueBitmap)
 
-        fun (processor: MailboxProcessor<_>) allocationMode (inputArray: ClArray<'a>) ->
+        fun (processor: RawCommandQueue) allocationMode (inputArray: ClArray<'a>) ->
 
             let inputLength = inputArray.Length
 
@@ -36,9 +36,9 @@ module Bitmap =
 
             let kernel = kernel.GetKernel()
 
-            processor.Post(Msg.MsgSetArguments(fun () -> kernel.KernelFunc ndRange inputArray inputLength bitmap))
+            kernel.KernelFunc ndRange inputArray inputLength bitmap
 
-            processor.Post(Msg.CreateRunMsg<_, _> kernel)
+            processor.RunKernel kernel
 
             bitmap
 
@@ -67,7 +67,7 @@ module Bitmap =
 
         let firstGetBitmap = getUniqueBitmap clContext workGroupSize
 
-        fun (processor: MailboxProcessor<_>) allocationMode (firstArray: ClArray<'a>) (secondArray: ClArray<'a>) ->
+        fun (processor: RawCommandQueue) allocationMode (firstArray: ClArray<'a>) (secondArray: ClArray<'a>) ->
             let firstBitmap =
                 firstGetBitmap processor DeviceOnly firstArray
 
@@ -77,8 +77,8 @@ module Bitmap =
             let result =
                 map processor allocationMode firstBitmap secondBitmap
 
-            firstBitmap.Free processor
-            secondBitmap.Free processor
+            firstBitmap.Free()
+            secondBitmap.Free()
 
             result
 

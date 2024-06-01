@@ -41,8 +41,8 @@ let makeTestSequentialSegments isEqual scanHost scanDevice (keysAndValues: (int 
         scanDevice processor uniqueKeysCount clValues clKeys clOffsets
 
         let actual = clValues.ToHostAndFree processor
-        clKeys.Free processor
-        clOffsets.Free processor
+        clKeys.Free()
+        clOffsets.Free()
 
         let keysAndValues = Array.zip keys values
 

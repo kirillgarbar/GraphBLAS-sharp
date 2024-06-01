@@ -32,7 +32,7 @@ let makeTest plus zero sum (array: 'a []) =
             let clArray = context.CreateClArray array
             let (total: ClCell<_>) = sum q clArray
 
-            clArray.Free q
+            clArray.Free()
             total.ToHostAndFree q
 
         logger.debug (
@@ -57,7 +57,7 @@ let testFixtures plus (plusQ: Expr<'a -> 'a -> 'a>) zero name =
 
 let tests =
 
-    q.Error.Add(fun e -> failwithf "%A" e)
+    //q.Error.Add(fun e -> failwithf "%A" e)
 
     [ testFixtures (+) <@ (+) @> 0 "int add"
       testFixtures (+) <@ (+) @> 0uy "byte add"

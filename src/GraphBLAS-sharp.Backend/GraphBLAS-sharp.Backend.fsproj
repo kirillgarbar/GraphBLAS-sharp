@@ -13,7 +13,6 @@
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="Constants/Constants.fs" />
     <Compile Include="Objects/Common.fs" />
-    <Compile Include="Objects/MailboxProcessorExtensions.fs" />
     <Compile Include="Objects/ArraysExtentions.fs" />
     <Compile Include="Objects/Vector.fs" />
     <Compile Include="Objects/Matrix.fs" />

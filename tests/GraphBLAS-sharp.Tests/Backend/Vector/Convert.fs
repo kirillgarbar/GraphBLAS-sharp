@@ -10,6 +10,7 @@ open GraphBLAS.FSharp.Backend
 open GraphBLAS.FSharp.Objects
 open GraphBLAS.FSharp.Objects.ClVectorExtensions
 open GraphBLAS.FSharp.Objects.ClContextExtensions
+open Brahma.FSharp
 
 let logger =
     Log.create "Backend.Vector.Convert.Tests"
@@ -20,7 +21,7 @@ let wgSize = Constants.Common.defaultWorkGroupSize
 
 let makeTest
     formatFrom
-    (convertFun: MailboxProcessor<_> -> AllocationFlag -> ClVector<'a> -> ClVector<'a>)
+    (convertFun: RawCommandQueue -> AllocationFlag -> ClVector<'a> -> ClVector<'a>)
     isZero
     case
     (array: 'a [])
@@ -40,8 +41,8 @@ let makeTest
 
             let res = convertedVector.ToHost q
 
-            clVector.Dispose q
-            convertedVector.Dispose q
+            clVector.Dispose()
+            convertedVector.Dispose()
 
             res
 
@@ -62,7 +63,7 @@ let testFixtures case =
     let context = case.TestContext.ClContext
     let q = case.TestContext.Queue
 
-    q.Error.Add(fun e -> failwithf "%A" e)
+    //q.Error.Add(fun e -> failwithf "%A" e)
 
     match case.Format with
     | Sparse ->

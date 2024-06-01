@@ -26,7 +26,7 @@ module Scatter =
 
         let program = clContext.Compile(run)
 
-        fun (processor: MailboxProcessor<_>) (positions: ClArray<int>) (values: ClArray<'a>) (result: ClArray<'a>) ->
+        fun (processor: RawCommandQueue) (positions: ClArray<int>) (values: ClArray<'a>) (result: ClArray<'a>) ->
 
             if positions.Length <> values.Length then
                 failwith "Lengths must be the same"
@@ -38,12 +38,9 @@ module Scatter =
 
             let kernel = program.GetKernel()
 
-            processor.Post(
-                Msg.MsgSetArguments
-                    (fun () -> kernel.KernelFunc ndRange positions positionsLength values result result.Length)
-            )
+            kernel.KernelFunc ndRange positions positionsLength values result result.Length
 
-            processor.Post(Msg.CreateRunMsg<_, _>(kernel))
+            processor.RunKernel kernel
 
     /// <summary>
     /// Creates a new array from the given one where it is indicated
@@ -114,7 +111,7 @@ module Scatter =
 
         let program = clContext.Compile(run)
 
-        fun (processor: MailboxProcessor<_>) (positions: ClArray<int>) (result: ClArray<'a>) ->
+        fun (processor: RawCommandQueue) (positions: ClArray<int>) (result: ClArray<'a>) ->
 
             let positionsLength = positions.Length
 
@@ -123,11 +120,9 @@ module Scatter =
 
             let kernel = program.GetKernel()
 
-            processor.Post(
-                Msg.MsgSetArguments(fun () -> kernel.KernelFunc ndRange positions positionsLength result result.Length)
-            )
+            kernel.KernelFunc ndRange positions positionsLength result result.Length
 
-            processor.Post(Msg.CreateRunMsg<_, _>(kernel))
+            processor.RunKernel kernel
 
     /// <summary>
     /// Creates a new array from the given one where it is indicated by the array of positions at which position in the new array

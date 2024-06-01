@@ -1,23 +1,23 @@
 ﻿namespace GraphBLAS.FSharp.Objects
 
 open Brahma.FSharp
-open GraphBLAS.FSharp.Objects.MailboxProcessorExtensions
 
 module ArraysExtensions =
     type ClArray<'a> with
-        member this.FreeAndWait(q: MailboxProcessor<Msg>) =
-            q.Post(Msg.CreateFreeMsg this)
-            finish q
+        member this.FreeAndWait(q: RawCommandQueue) =
+            this.Dispose()
+            q.Synchronize()
 
-        member this.ToHost(q: MailboxProcessor<Msg>) =
+        member this.ToHost(q: RawCommandQueue) =
             let dst = Array.zeroCreate this.Length
-            q.PostAndReply(fun ch -> Msg.CreateToHostMsg(this, dst, ch))
+            q.ToHost(this, dst, true)
+            dst
 
-        member this.Free(q: MailboxProcessor<_>) = q.Post <| Msg.CreateFreeMsg this
+        member this.Free() = this.Dispose()
 
-        member this.ToHostAndFree(q: MailboxProcessor<_>) =
+        member this.ToHostAndFree(q: RawCommandQueue) =
             let result = this.ToHost q
-            this.Free q
+            this.Free()
 
             result
 
