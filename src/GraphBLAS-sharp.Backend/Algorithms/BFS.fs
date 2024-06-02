@@ -148,7 +148,8 @@ module internal BFS =
         let fillSubVectorInPlace =
             Vector.assignByMaskInPlace (Mask.assign) clContext workGroupSize
 
-        let toSparse = Vector.toSparse clContext workGroupSize
+        let toSparse =
+            Vector.toSparseUnsorted clContext workGroupSize
 
         let toDense = Vector.toDense clContext workGroupSize
 
