@@ -10,7 +10,7 @@ module Bitonic =
         let localSize =
             Common.Utils.floorToPower2 (
                 int (clContext.ClDevice.LocalMemSize)
-                / (sizeof<int> + sizeof<'a>)
+                / (sizeof<uint64> + sizeof<'a>)
             )
             / 2
 
